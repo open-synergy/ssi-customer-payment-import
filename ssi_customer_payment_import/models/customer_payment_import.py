@@ -293,6 +293,24 @@ Solution: Check the existing import or use a different file""" % (
         for row in sheet.iter_rows(values_only=True):
             yield ["" if cell is None else cell for cell in row]
 
+    @ssi_decorator.post_queue_done_action()
+    def _01_create_payment_on_queue_done(self):
+        self.ensure_one()
+        for data_line in self.data_ids:
+            description = "Create customer payment for data line ID %s" % data_line.id
+            data_line.with_context(job_batch=self.done_queue_job_batch_id).with_delay(
+                description=_(description)
+            )._process_payment()
+
+    @ssi_decorator.post_queue_cancel_action()
+    def _01_cancel_payment_on_queue_cancel(self):
+        self.ensure_one()
+        for data_line in self.data_ids.filtered(lambda d: d.payment_id):
+            description = "Cancel customer payment for data line ID %s" % data_line.id
+            data_line.with_context(job_batch=self.cancel_queue_job_batch_id).with_delay(
+                description=_(description)
+            )._cancel_payment()
+
     @ssi_decorator.insert_on_form_view()
     def _insert_form_element(self, view_arch):
         if self._automatically_insert_view_element:

@@ -44,6 +44,9 @@
         "sequence_template/customer_payment_import.xml",
         "approval_template/customer_payment_import.xml",
         "policy_template/customer_payment_import.xml",
+        # Queue automation
+        "data/ir_actions_server_data.xml",
+        "data/base_automation_data.xml",
         # Views
         "views/customer_payment_import_type_views.xml",
         "views/customer_payment_import_views.xml",
