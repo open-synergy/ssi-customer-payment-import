@@ -110,7 +110,7 @@ scenarios:
           amount_column: "amount"
           communication_column: "description"
           journal_selection_method: "domain"
-          journal_domain: "[('type', '=', 'bank')]"
+          journal_domain: 'EVAL: "[(''id'', ''='', %d)]" % registry[''journal''].id'
 
       - step: "Create import document"
         action: "create"
@@ -308,6 +308,11 @@ scenarios:
         method: "action_confirm"
         as_user: "base.user_admin"
 
+      - step: "Invalidate cache after confirm"
+        action: "call"
+        target: "import_doc"
+        method: "invalidate_cache"
+
       - step: "Approve import (auto post payment)"
         action: "call"
         target: "import_doc"
@@ -407,6 +412,11 @@ scenarios:
         target: "import_doc"
         method: "action_confirm"
         as_user: "base.user_admin"
+
+      - step: "Invalidate cache after confirm"
+        action: "call"
+        target: "import_doc"
+        method: "invalidate_cache"
 
       - step: "Approve import to done"
         action: "call"
@@ -529,6 +539,11 @@ scenarios:
         target: "import_doc"
         method: "action_confirm"
         as_user: "base.user_admin"
+
+      - step: "Invalidate cache after confirm"
+        action: "call"
+        target: "import_doc"
+        method: "invalidate_cache"
 
       - step: "Approve import to done (payment posted)"
         action: "call"
