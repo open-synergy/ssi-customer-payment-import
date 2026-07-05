@@ -1,0 +1,89 @@
+scenarios:
+  - name: "Create Customer Payment Import Type"
+    steps:
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Test Bank CSV Type"
+          code: "TBCT001"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Assert type created"
+        action: "assert"
+        target: "ctype"
+        asserts:
+          id:
+            type: "value"
+            operator: "is_truthy"
+          name:
+            type: "value"
+            expected: "Test Bank CSV Type"
+          file_type:
+            type: "value"
+            expected: "csv"
+          auto_post:
+            type: "value"
+            expected: false
+          journal_selection_method:
+            type: "value"
+            expected: "domain"
+
+  - name: "Edit Customer Payment Import Type Name"
+    steps:
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Editable Type"
+          code: "TBCT002"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Write new name"
+        action: "write"
+        target: "ctype"
+        values:
+          name: "Updated Type Name"
+          auto_post: true
+
+      - step: "Assert name and auto_post updated"
+        action: "assert"
+        target: "ctype"
+        asserts:
+          name:
+            type: "value"
+            expected: "Updated Type Name"
+          auto_post:
+            type: "value"
+            expected: true
+
+  - name: "Delete Customer Payment Import Type"
+    steps:
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Deletable Type"
+          code: "TBCT003"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Delete type"
+        action: "call"
+        target: "ctype"
+        method: "unlink"
+
+      - step: "Verify type deleted"
+        action: "search"
+        model: "customer_payment_import_type"
+        domain: [["code", "=", "TBCT003"]]
+        save_as: "result"
+        expect_count: 0

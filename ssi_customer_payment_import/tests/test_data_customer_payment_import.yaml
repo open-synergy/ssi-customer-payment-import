@@ -1,0 +1,577 @@
+scenarios:
+  - name: "Customer Payment Import - Load Data from CSV file"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Load"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Load Data Test Type"
+          code: "LDTT001"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          communication_column: "description"
+
+      - step: "Create import document with CSV file"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        as_user: "base.user_admin"
+        values:
+          type_id: "EVAL: registry['ctype'].id"
+          journal_id: "EVAL: registry['journal'].id"
+          import_file: "ZGF0ZSxhY2NvdW50X251bWJlcixhbW91bnQsZGVzY3JpcHRpb24KMjAyNi0wMi0wMSwxMTExMTExMTExLDE1MDAwMCxQYXltZW50IEEKMjAyNi0wMi0wMiw2NjY2NjY2NjY2LDI3NTUwMCxQYXltZW50IEIK"
+          import_file_name: "sample.csv"
+
+      - step: "Load data from CSV"
+        action: "call"
+        target: "import_doc"
+        method: "action_load_data"
+
+      - step: "Invalidate cache after load"
+        action: "call"
+        target: "import_doc"
+        method: "invalidate_cache"
+
+      - step: "Assert two data lines created"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          data_ids:
+            type: "o2m"
+            check: "count"
+            expected_count: 2
+
+      - step: "Get first data line"
+        action: "search"
+        model: "customer_payment_import.data"
+        domain:
+          - ["import_id", "=", "EVAL: registry['import_doc'].id"]
+        save_as: "line1"
+        limit: 1
+        order: "sequence asc"
+
+      - step: "Assert first line content"
+        action: "assert"
+        target: "line1"
+        asserts:
+          sequence:
+            type: "value"
+            expected: 1
+          data:
+            type: "value"
+            operator: "contains"
+            expected: "1111111111"
+
+  - name: "Customer Payment Import - Full Workflow to Done (auto_post false)"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Test Import Customer C"
+          is_company: true
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "2222222222"
+          partner_id: "EVAL: registry['partner'].id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal C"
+          type: "bank"
+
+      - step: "Create type (auto_post false)"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Workflow Type Draft"
+          code: "WFTD001"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          communication_column: "description"
+          journal_selection_method: "domain"
+          journal_domain: "[('type', '=', 'bank')]"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        as_user: "base.user_admin"
+        values:
+          type_id: "EVAL: registry['ctype'].id"
+          journal_id: "EVAL: registry['journal'].id"
+
+      - step: "Assert import created in draft"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          state:
+            type: "value"
+            expected: "draft"
+
+      - step: "Assert allowed_journal_ids filtered by domain"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          allowed_journal_ids:
+            type: "m2m"
+            check: "count"
+            expected_count: 1
+
+      - step: "Create data line manually (bypass file parsing)"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line"
+        values:
+          import_id: "EVAL: registry['import_doc'].id"
+          sequence: 1
+          data:
+            '{"date": "2026-02-05", "account_number": "2222222222", "amount": "175000",
+            "description": "Workflow Payment C"}'
+
+      - step: "Confirm import"
+        action: "call"
+        target: "import_doc"
+        method: "action_confirm"
+        as_user: "base.user_admin"
+
+      - step: "Invalidate cache after confirm"
+        action: "call"
+        target: "import_doc"
+        method: "invalidate_cache"
+
+      - step: "Assert state confirm"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          state:
+            type: "value"
+            expected: "confirm"
+
+      - step: "Approve import (auto queue_done, synchronous job)"
+        action: "call"
+        target: "import_doc"
+        method: "action_approve_approval"
+        as_user: "base.user_admin"
+        context:
+          queue_job__no_delay: true
+
+      - step: "Invalidate cache after approve"
+        action: "call"
+        target: "import_doc"
+        method: "invalidate_cache"
+
+      - step: "Assert state done"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+
+      - step: "Get data line after processing"
+        action: "search"
+        model: "customer_payment_import.data"
+        domain:
+          - ["import_id", "=", "EVAL: registry['import_doc'].id"]
+        save_as: "line_after"
+        limit: 1
+
+      - step: "Assert data line linked to payment"
+        action: "assert"
+        target: "line_after"
+        asserts:
+          payment_id:
+            type: "value"
+            operator: "is_truthy"
+          partner_id:
+            type: "value"
+            operator: "is_truthy"
+          amount:
+            type: "value"
+            expected: 175000.0
+
+      - step: "Get created payment"
+        action: "search"
+        model: "account.payment"
+        domain:
+          - ["partner_id", "=", "EVAL: registry['partner'].id"]
+          - ["journal_id", "=", "EVAL: registry['journal'].id"]
+        save_as: "payment"
+        limit: 1
+
+      - step: "Assert payment fields (draft, not posted)"
+        action: "assert"
+        target: "payment"
+        asserts:
+          state:
+            type: "value"
+            expected: "draft"
+          payment_type:
+            type: "value"
+            expected: "inbound"
+          partner_type:
+            type: "value"
+            expected: "customer"
+          amount:
+            type: "value"
+            expected: 175000.0
+          ref:
+            type: "value"
+            expected: "Workflow Payment C"
+          date:
+            type: "value"
+            expected: 2026-02-05
+
+  - name: "Customer Payment Import - Full Workflow Auto Post True"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Test Import Customer D"
+          is_company: true
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "3333333333"
+          partner_id: "EVAL: registry['partner'].id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal D"
+          type: "bank"
+
+      - step: "Create type (auto_post true)"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Workflow Type Auto Post"
+          code: "WFTD002"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          communication_column: "description"
+          auto_post: true
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        as_user: "base.user_admin"
+        values:
+          type_id: "EVAL: registry['ctype'].id"
+          journal_id: "EVAL: registry['journal'].id"
+
+      - step: "Create data line manually"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line"
+        values:
+          import_id: "EVAL: registry['import_doc'].id"
+          sequence: 1
+          data:
+            '{"date": "2026-02-06", "account_number": "3333333333", "amount": "290000",
+            "description": "Workflow Payment D"}'
+
+      - step: "Confirm import"
+        action: "call"
+        target: "import_doc"
+        method: "action_confirm"
+        as_user: "base.user_admin"
+
+      - step: "Approve import (auto post payment)"
+        action: "call"
+        target: "import_doc"
+        method: "action_approve_approval"
+        as_user: "base.user_admin"
+        context:
+          queue_job__no_delay: true
+
+      - step: "Invalidate cache after approve"
+        action: "call"
+        target: "import_doc"
+        method: "invalidate_cache"
+
+      - step: "Assert state done"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+
+      - step: "Get created payment"
+        action: "search"
+        model: "account.payment"
+        domain:
+          - ["partner_id", "=", "EVAL: registry['partner'].id"]
+          - ["journal_id", "=", "EVAL: registry['journal'].id"]
+        save_as: "payment"
+        limit: 1
+
+      - step: "Assert payment posted"
+        action: "assert"
+        target: "payment"
+        asserts:
+          state:
+            type: "value"
+            expected: "posted"
+
+  - name: "Customer Payment Import - Queue To Cancel deletes draft payment"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Test Import Customer E"
+          is_company: true
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "4444444444"
+          partner_id: "EVAL: registry['partner'].id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal E"
+          type: "bank"
+
+      - step: "Create type (auto_post false)"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Workflow Type Cancel Draft"
+          code: "WFTD003"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        as_user: "base.user_admin"
+        values:
+          type_id: "EVAL: registry['ctype'].id"
+          journal_id: "EVAL: registry['journal'].id"
+
+      - step: "Create data line manually"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line"
+        values:
+          import_id: "EVAL: registry['import_doc'].id"
+          sequence: 1
+          data:
+            '{"date": "2026-02-07", "account_number": "4444444444", "amount": "100000"}'
+
+      - step: "Confirm import"
+        action: "call"
+        target: "import_doc"
+        method: "action_confirm"
+        as_user: "base.user_admin"
+
+      - step: "Approve import to done"
+        action: "call"
+        target: "import_doc"
+        method: "action_approve_approval"
+        as_user: "base.user_admin"
+        context:
+          queue_job__no_delay: true
+
+      - step: "Invalidate cache after approve"
+        action: "call"
+        target: "import_doc"
+        method: "invalidate_cache"
+
+      - step: "Queue to cancel from done"
+        action: "call"
+        target: "import_doc"
+        method: "action_queue_cancel"
+        as_user: "base.user_admin"
+        context:
+          queue_job__no_delay: true
+
+      - step: "Invalidate cache after cancel"
+        action: "call"
+        target: "import_doc"
+        method: "invalidate_cache"
+
+      - step: "Assert state cancel"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          state:
+            type: "value"
+            expected: "cancel"
+
+      - step: "Get data line after cancel"
+        action: "search"
+        model: "customer_payment_import.data"
+        domain:
+          - ["import_id", "=", "EVAL: registry['import_doc'].id"]
+        save_as: "line_after"
+        limit: 1
+
+      - step: "Assert payment link cleared"
+        action: "assert"
+        target: "line_after"
+        asserts:
+          payment_id:
+            type: "value"
+            operator: "is_falsy"
+
+      - step: "Verify draft payment was deleted"
+        action: "search"
+        model: "account.payment"
+        domain:
+          - ["partner_id", "=", "EVAL: registry['partner'].id"]
+          - ["journal_id", "=", "EVAL: registry['journal'].id"]
+        save_as: "payments_after_cancel"
+        expect_count: 0
+
+  - name: "Customer Payment Import - Queue To Cancel cancels posted payment"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Test Import Customer F"
+          is_company: true
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "5555555555"
+          partner_id: "EVAL: registry['partner'].id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal F"
+          type: "bank"
+
+      - step: "Create type (auto_post true)"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Workflow Type Cancel Posted"
+          code: "WFTD004"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          auto_post: true
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        as_user: "base.user_admin"
+        values:
+          type_id: "EVAL: registry['ctype'].id"
+          journal_id: "EVAL: registry['journal'].id"
+
+      - step: "Create data line manually"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line"
+        values:
+          import_id: "EVAL: registry['import_doc'].id"
+          sequence: 1
+          data:
+            '{"date": "2026-02-08", "account_number": "5555555555", "amount": "120000"}'
+
+      - step: "Confirm import"
+        action: "call"
+        target: "import_doc"
+        method: "action_confirm"
+        as_user: "base.user_admin"
+
+      - step: "Approve import to done (payment posted)"
+        action: "call"
+        target: "import_doc"
+        method: "action_approve_approval"
+        as_user: "base.user_admin"
+        context:
+          queue_job__no_delay: true
+
+      - step: "Queue to cancel from done"
+        action: "call"
+        target: "import_doc"
+        method: "action_queue_cancel"
+        as_user: "base.user_admin"
+        context:
+          queue_job__no_delay: true
+
+      - step: "Invalidate cache after cancel"
+        action: "call"
+        target: "import_doc"
+        method: "invalidate_cache"
+
+      - step: "Assert state cancel"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          state:
+            type: "value"
+            expected: "cancel"
+
+      - step: "Get payment after cancel"
+        action: "search"
+        model: "account.payment"
+        domain:
+          - ["partner_id", "=", "EVAL: registry['partner'].id"]
+          - ["journal_id", "=", "EVAL: registry['journal'].id"]
+        save_as: "payment_after_cancel"
+        limit: 1
+
+      - step: "Assert posted payment was cancelled, not deleted"
+        action: "assert"
+        target: "payment_after_cancel"
+        asserts:
+          state:
+            type: "value"
+            expected: "cancel"
