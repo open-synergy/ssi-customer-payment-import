@@ -1,0 +1,77 @@
+scenarios:
+  - name: "Customer Payment Import - Operating Unit propagation"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal OU"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Operating Unit Test Type"
+          code: "OUTT001"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document with operating_unit_id"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        as_user: "base.user_admin"
+        values:
+          type_id: "EVAL: registry['ctype'].id"
+          journal_id: "EVAL: registry['journal'].id"
+          operating_unit_id: "REF: operating_unit.main_operating_unit"
+
+      - step: "Assert operating_unit_id is set"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          operating_unit_id:
+            type: "value"
+            operator: "is_truthy"
+
+  - name: "Customer Payment Import - Operating Unit defaults from user"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal OU Default"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Operating Unit Test Type Default"
+          code: "OUTT002"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document without explicit operating_unit_id"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc_default_ou"
+        as_user: "base.user_admin"
+        values:
+          type_id: "EVAL: registry['ctype'].id"
+          journal_id: "EVAL: registry['journal'].id"
+
+      - step: "Assert operating_unit_id defaulted from user's default operating unit"
+        action: "assert"
+        target: "import_doc_default_ou"
+        asserts:
+          operating_unit_id:
+            type: "m2o"
+            expected_xml_id: "operating_unit.main_operating_unit"
