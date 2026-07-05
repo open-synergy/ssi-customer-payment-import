@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 OpenSynergy Indonesia
+     Copyright 2026 PT. Simetri Sinergi Indonesia
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo>
+<record id="customer_payment_import_view_search" model="ir.ui.view">
+    <field name="name">customer_payment_import - search</field>
+    <field name="model">customer_payment_import</field>
+    <field
+            name="inherit_id"
+            ref="ssi_transaction_mixin.mixin_transaction_view_search"
+        />
+    <field name="mode">primary</field>
+    <field name="arch" type="xml">
+        <data>
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="type_id" />
+                <field name="journal_id" />
+                <field name="date" />
+                <filter
+                        name="filter_today"
+                        string="Today"
+                        domain="[('date','=',context_today().strftime('%Y-%m-%d'))]"
+                    />
+                <filter
+                        name="filter_this_month"
+                        string="This Month"
+                        domain="[('date','&gt;=', (context_today() + relativedelta(day=1)).strftime('%Y-%m-%d')),('date','&lt;=', (context_today() + relativedelta(day=31)).strftime('%Y-%m-%d'))]"
+                    />
+                <separator />
+                <group expand="0" string="Group By">
+                    <filter
+                            name="group_by_type"
+                            string="Type"
+                            context="{'group_by': 'type_id'}"
+                        />
+                    <filter
+                            name="group_by_journal"
+                            string="Journal"
+                            context="{'group_by': 'journal_id'}"
+                        />
+                    <filter
+                            name="group_by_date"
+                            string="Date"
+                            context="{'group_by': 'date:month'}"
+                        />
+                </group>
+            </xpath>
+        </data>
+    </field>
+</record>
+
+<record id="customer_payment_import_view_tree" model="ir.ui.view">
+    <field name="name">customer_payment_import - tree</field>
+    <field name="model">customer_payment_import</field>
+    <field name="inherit_id" ref="ssi_transaction_mixin.mixin_transaction_view_tree" />
+    <field name="mode">primary</field>
+    <field name="arch" type="xml">
+        <data>
+            <xpath expr="//field[@name='company_id']" position="after">
+                <field name="date" />
+                <field name="type_id" />
+                <field name="journal_id" />
+            </xpath>
+        </data>
+    </field>
+</record>
+
+<record id="customer_payment_import_view_form" model="ir.ui.view">
+    <field name="name">customer_payment_import - form</field>
+    <field name="model">customer_payment_import</field>
+    <field name="inherit_id" ref="ssi_transaction_mixin.mixin_transaction_view_form" />
+    <field name="mode">primary</field>
+    <field name="arch" type="xml">
+        <data>
+            <xpath expr="//field[@name='user_id']" position="after">
+                <field name="type_id" />
+                <field name="journal_id" />
+                <field name="allowed_journal_ids" invisible="1" />
+            </xpath>
+            <xpath expr="//group[@name='header_right']" position="inside">
+                <field name="date" />
+                <field name="import_file_name" invisible="1" />
+                <field
+                        name="import_file"
+                        filename="import_file_name"
+                        widget="binary"
+                        attrs="{'readonly': [('state','!=','draft')]}"
+                    />
+            </xpath>
+            <xpath expr="//page[1]" position="before">
+                <page name="import_data" string="Import Data">
+                    <button
+                            name="action_load_data"
+                            string="Load Data"
+                            type="object"
+                            class="oe_highlight"
+                            icon="fa-upload"
+                            attrs="{'invisible':[('state','!=','draft')]}"
+                        />
+                    <field name="data_ids">
+                        <tree>
+                            <field name="sequence" />
+                            <field name="data" widget="json_viewer" />
+                            <field name="partner_id" />
+                            <field name="amount" />
+                            <field name="payment_id" />
+                        </tree>
+                        <form>
+                            <group>
+                                <group>
+                                    <field name="sequence" />
+                                    <field name="partner_id" />
+                                    <field name="amount" />
+                                    <field name="payment_id" />
+                                </group>
+                            </group>
+                            <group string="Data">
+                                <field
+                                        name="data"
+                                        widget="json_viewer"
+                                        nolabel="1"
+                                        colspan="2"
+                                    />
+                            </group>
+                        </form>
+                    </field>
+                </page>
+            </xpath>
+        </data>
+    </field>
+</record>
+
+<record id="customer_payment_import_action" model="ir.actions.act_window">
+    <field name="name">Customer Payment Imports</field>
+    <field name="res_model">customer_payment_import</field>
+    <field name="view_mode">tree,form</field>
+</record>
+
+<menuitem
+        id="customer_payment_import_menu"
+        name="Customer Payment Imports"
+        parent="ssi_financial_accounting.menu_account_receivable"
+        action="customer_payment_import_action"
+        groups="customer_payment_import_viewer_group"
+        sequence="30"
+    />
+</odoo>
