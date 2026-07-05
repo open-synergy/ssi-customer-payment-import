@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 OpenSynergy Indonesia
+     Copyright 2026 PT. Simetri Sinergi Indonesia
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo>
+<record id="customer_payment_import_type_view_search" model="ir.ui.view">
+    <field name="name">customer_payment_import_type - search</field>
+    <field name="model">customer_payment_import_type</field>
+    <field
+            name="inherit_id"
+            ref="ssi_master_data_mixin.mixin_master_data_view_search"
+        />
+    <field name="mode">primary</field>
+    <field name="arch" type="xml">
+        <data>
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="file_type" />
+            </xpath>
+        </data>
+    </field>
+</record>
+
+<record id="customer_payment_import_type_view_tree" model="ir.ui.view">
+    <field name="name">customer_payment_import_type - tree</field>
+    <field name="model">customer_payment_import_type</field>
+    <field name="inherit_id" ref="ssi_master_data_mixin.mixin_master_data_view_tree" />
+    <field name="mode">primary</field>
+    <field name="arch" type="xml">
+        <data>
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="file_type" />
+                <field name="auto_post" />
+            </xpath>
+        </data>
+    </field>
+</record>
+
+<record id="customer_payment_import_type_view_form" model="ir.ui.view">
+    <field name="name">customer_payment_import_type - form</field>
+    <field name="model">customer_payment_import_type</field>
+    <field name="inherit_id" ref="ssi_master_data_mixin.mixin_master_data_view_form" />
+    <field name="mode">primary</field>
+    <field name="arch" type="xml">
+        <data>
+            <xpath expr="//notebook/page[@name='note']" position="before">
+                <page name="file_format" string="File Format">
+                    <group name="file_format_1" colspan="4" col="2">
+                        <field name="file_type" />
+                        <field name="file_encoding" />
+                        <field name="delimiter" />
+                        <field name="quotechar" />
+                        <field name="sheet_name" />
+                        <field name="no_header" />
+                        <field name="skip_empty_lines" />
+                        <field name="offset_row" />
+                    </group>
+                </page>
+                <page name="column_mapping" string="Column Mapping">
+                    <group name="column_mapping_1" colspan="4" col="2">
+                        <field name="date_column" />
+                        <field name="date_format" />
+                        <field name="partner_bank_account_column" />
+                        <field name="amount_column" />
+                        <field name="communication_column" />
+                        <field name="unique_ref_column" />
+                    </group>
+                </page>
+                <page name="payment_option" string="Payment Option">
+                    <group name="payment_option_1" colspan="4" col="2">
+                        <field name="auto_post" />
+                    </group>
+                </page>
+                <page name="journal_config" string="Journal Configuration">
+                    <group name="journal_config_1" colspan="4" col="2">
+                        <field name="journal_selection_method" />
+                        <field
+                                name="journal_ids"
+                                widget="many2many_tags"
+                                attrs="{'invisible':[('journal_selection_method','!=','manual')]}"
+                            />
+                        <field
+                                name="journal_domain"
+                                widget="domain"
+                                options="{'model': 'account.journal', 'in_dialog': True}"
+                                attrs="{'invisible':[('journal_selection_method','!=','domain')]}"
+                            />
+                        <field
+                                name="journal_python_code"
+                                widget="ace"
+                                attrs="{'invisible':[('journal_selection_method','!=','code')]}"
+                            />
+                    </group>
+                </page>
+            </xpath>
+        </data>
+    </field>
+</record>
+
+<record id="customer_payment_import_type_action" model="ir.actions.act_window">
+    <field name="name">Customer Payment Import Types</field>
+    <field name="res_model">customer_payment_import_type</field>
+    <field name="view_mode">tree,form</field>
+</record>
+
+<menuitem
+        id="customer_payment_import_type_menu"
+        name="Customer Payment Import Types"
+        parent="ssi_financial_accounting.menu_financial_accounting_configuration"
+        action="customer_payment_import_type_action"
+        groups="customer_payment_import_type_group"
+        sequence="230"
+    />
+</odoo>
