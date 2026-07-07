@@ -59,6 +59,41 @@ msgid "# Import"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__account_id
+msgid "Account"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.customer_payment_import_type_view_form
+msgid "Account Configuration"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__account_domain
+msgid "Account Domain"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__account_python_code
+msgid "Account Python Code"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__account_selection_method
+msgid "Account Selection Method"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__account_ids
+msgid "Accounts"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import__allowed_account_ids
+msgid "Accounts allowed to be selected, as configured on the Type."
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__message_needaction
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__message_needaction
 msgid "Action Needed"
@@ -123,6 +158,11 @@ msgstr ""
 #. module: ssi_customer_payment_import
 #: model:res.groups,name:ssi_customer_payment_import.customer_payment_import_all_group
 msgid "All"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__allowed_account_ids
+msgid "Allowed Accounts"
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -458,6 +498,13 @@ msgid "Delimiter"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import__account_id
+msgid ""
+"Destination account used to create the customer payments from this import. "
+"If left empty, the default account computed by the payment itself is used."
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__display_name
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__display_name
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__display_name
@@ -465,8 +512,16 @@ msgid "Display Name"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__account_selection_method__domain
 #: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__journal_selection_method__domain
 msgid "Domain"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__account_domain
+msgid ""
+"Domain expression evaluated against account.account to determine the allowed"
+" accounts. Used when Account Selection Method = Domain."
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -687,6 +742,7 @@ msgid "Main Attachment"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__account_selection_method__manual
 #: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__journal_selection_method__manual
 msgid "Manual"
 msgstr ""
@@ -697,6 +753,13 @@ msgid ""
 "Manual number assignment policy\n"
 "\n"
 "* If active user can edit document number"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__account_ids
+msgid ""
+"Manually selected list of allowed accounts. Used when Account Selection "
+"Method = Manual."
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -738,6 +801,13 @@ msgstr ""
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__message_ids
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__message_ids
 msgid "Messages"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__account_selection_method
+msgid ""
+"Method used to determine which accounts can be selected on an import "
+"document of this type."
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -870,8 +940,16 @@ msgid "Policy Template"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__account_selection_method__code
 #: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__journal_selection_method__code
 msgid "Python Code"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__account_python_code
+msgid ""
+"Python code that must set the `result` variable to a recordset of "
+"account.account. Used when Account Selection Method = Python Code."
 msgstr ""
 
 #. module: ssi_customer_payment_import
