@@ -91,6 +91,27 @@
                             />
                     </group>
                 </page>
+                <page name="account_config" string="Account Configuration">
+                    <group name="account_config_1" colspan="4" col="2">
+                        <field name="account_selection_method" />
+                        <field
+                                name="account_ids"
+                                widget="many2many_tags"
+                                attrs="{'invisible':[('account_selection_method','!=','manual')]}"
+                            />
+                        <field
+                                name="account_domain"
+                                widget="domain"
+                                options="{'model': 'account.account', 'in_dialog': True}"
+                                attrs="{'invisible':[('account_selection_method','!=','domain')]}"
+                            />
+                        <field
+                                name="account_python_code"
+                                widget="ace"
+                                attrs="{'invisible':[('account_selection_method','!=','code')]}"
+                            />
+                    </group>
+                </page>
             </xpath>
         </data>
     </field>

@@ -193,6 +193,50 @@ class CustomerPaymentImportType(models.Model):
         ),
     )
 
+    # --- Account M2O configurator ---
+
+    account_selection_method = fields.Selection(
+        string="Account Selection Method",
+        selection=[
+            ("manual", "Manual"),
+            ("domain", "Domain"),
+            ("code", "Python Code"),
+        ],
+        default="domain",
+        required=True,
+        help=(
+            "Method used to determine which accounts can be selected on an "
+            "import document of this type."
+        ),
+    )
+    account_ids = fields.Many2many(
+        string="Accounts",
+        comodel_name="account.account",
+        relation="rel_customer_payment_import_type_2_account_account",
+        column1="type_id",
+        column2="account_id",
+        help=(
+            "Manually selected list of allowed accounts. Used when Account "
+            "Selection Method = Manual."
+        ),
+    )
+    account_domain = fields.Text(
+        default="[]",
+        string="Account Domain",
+        help=(
+            "Domain expression evaluated against account.account to determine "
+            "the allowed accounts. Used when Account Selection Method = Domain."
+        ),
+    )
+    account_python_code = fields.Text(
+        default="result = []",
+        string="Account Python Code",
+        help=(
+            "Python code that must set the `result` variable to a recordset of "
+            "account.account. Used when Account Selection Method = Python Code."
+        ),
+    )
+
     def _get_column_delimiter_character(self):
         self.ensure_one()
         return {

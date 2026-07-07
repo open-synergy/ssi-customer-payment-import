@@ -31,6 +31,9 @@ scenarios:
           journal_selection_method:
             type: "value"
             expected: "domain"
+          account_selection_method:
+            type: "value"
+            expected: "domain"
 
   - name: "Edit Customer Payment Import Type Name"
     steps:

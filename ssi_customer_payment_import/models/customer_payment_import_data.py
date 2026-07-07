@@ -234,7 +234,7 @@ Solution: Register the bank account on the partner (res.partner.bank),
     def _prepare_payment_data(self, partner, amount, payment_date, communication):
         self.ensure_one()
         imp = self.import_id
-        return {
+        vals = {
             "payment_type": "inbound",
             "partner_type": "customer",
             "partner_id": partner.id,
@@ -243,6 +243,9 @@ Solution: Register the bank account on the partner (res.partner.bank),
             "date": payment_date,
             "ref": communication,
         }
+        if imp.account_id:
+            vals["destination_account_id"] = imp.account_id.id
+        return vals
 
     def _cancel_payment(self):
         """Cancel (if posted) or delete (if still draft) the linked
