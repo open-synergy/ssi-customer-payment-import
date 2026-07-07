@@ -133,6 +133,27 @@ class CustomerPaymentImport(models.Model):  # pylint: disable=too-few-public-met
         domain="[('id', 'in', allowed_journal_ids)]",
         help="Journal used to create the customer payments from this import.",
     )
+    allowed_account_ids = fields.Many2many(
+        string="Allowed Accounts",
+        comodel_name="account.account",
+        compute="_compute_allowed_account_ids",
+        store=False,
+        compute_sudo=True,
+        help="Accounts allowed to be selected, as configured on the Type.",
+    )
+    account_id = fields.Many2one(
+        string="Account",
+        comodel_name="account.account",
+        ondelete="restrict",
+        readonly=True,
+        states={"draft": [("readonly", False)]},
+        domain="[('id', 'in', allowed_account_ids)]",
+        help=(
+            "Destination account used to create the customer payments from "
+            "this import. If left empty, the default account computed by "
+            "the payment itself is used."
+        ),
+    )
     import_file = fields.Binary(
         string="Import File",
         readonly=True,
@@ -176,6 +197,20 @@ class CustomerPaymentImport(models.Model):  # pylint: disable=too-few-public-met
                     python_code=record.type_id.journal_python_code,
                 )
             record.allowed_journal_ids = result
+
+    @api.depends("type_id")
+    def _compute_allowed_account_ids(self):
+        for record in self:
+            result = False
+            if record.type_id:
+                result = record._m2o_configurator_get_filter(
+                    object_name="account.account",
+                    method_selection=record.type_id.account_selection_method,
+                    manual_recordset=record.type_id.account_ids,
+                    domain=record.type_id.account_domain,
+                    python_code=record.type_id.account_python_code,
+                )
+            record.allowed_account_ids = result
 
     @api.constrains("import_file_hash")
     def _check_duplicate_import_file_hash(self):
