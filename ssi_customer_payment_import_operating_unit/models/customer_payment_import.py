@@ -62,8 +62,7 @@ class CustomerPaymentImport(models.Model):
         if (
             self.journal_id
             and self.journal_id.operating_unit_ids
-            and self.operating_unit_id
-            not in self.journal_id.operating_unit_ids
+            and self.operating_unit_id not in self.journal_id.operating_unit_ids
         ):
             self.journal_id = False
 
