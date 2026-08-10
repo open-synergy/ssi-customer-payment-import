@@ -14,6 +14,17 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. module: ssi_customer_payment_import_operating_unit
+#: code:addons/ssi_customer_payment_import_operating_unit/models/customer_payment_import.py:0
+#, python-format
+msgid ""
+"\n"
+"Context: Confirm Customer Payment Import\n"
+"Database ID: %s\n"
+"Problem: Operating Unit %s does not match Journal %s's Operating Unit(s)\n"
+"Solution: Set the same Operating Unit as the Journal, or select another Journal\n"
+msgstr ""
+
+#. module: ssi_customer_payment_import_operating_unit
 #: model:ir.model,name:ssi_customer_payment_import_operating_unit.model_customer_payment_import
 msgid "Customer Payment Import"
 msgstr ""
