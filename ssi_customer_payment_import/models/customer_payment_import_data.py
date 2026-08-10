@@ -5,7 +5,7 @@
 import json
 from datetime import datetime
 
-from odoo import _, fields, models
+from odoo import _, api, fields, models, registry
 from odoo.exceptions import UserError
 
 from odoo.addons.base.models.res_bank import sanitize_account_number
@@ -230,16 +230,28 @@ Solution: Verify the Date Format on the import Type matches the actual data,
         """Entry point called by the queue job.
 
         Runs the actual conversion inside a savepoint so that any
-        partially created payment is rolled back on failure. Failures
-        never raise out of the job: they are recorded on the line as
-        ``state='error'`` instead, so the queue job itself always ends
-        up ``done``. When ``_run_process_payment`` reports that the
-        line already resolved itself (currently: excluded rows,
-        written to ``state='ignored'``), the final unconditional
-        ``state='done'`` write below is skipped, otherwise it would
-        overwrite the ``ignored`` state.
+        partially created payment is rolled back on failure -- the
+        savepoint releases the row locks taken by
+        ``_run_process_payment`` before the failure is recorded.
+        Unlike a savepoint-only rollback, failures now **raise out of
+        the job**: the error is recorded on the line through
+        ``_write_error_result`` (a separate cursor, since this job's
+        whole transaction is about to be rolled back once the
+        exception propagates), then the original exception is
+        re-raised so ``queue_job`` marks the job ``failed`` with
+        ``exc_info`` instead of ``done``. This keeps
+        ``queue.job.batch`` from reporting ``finished`` while a line
+        is still unresolved, so the parent import is not moved to
+        ``done`` prematurely. When ``_run_process_payment`` reports
+        that the line already resolved itself (currently: excluded
+        rows, written to ``state='ignored'``), the final
+        unconditional ``state='done'`` write below is skipped,
+        otherwise it would overwrite the ``ignored`` state.
 
         :return: ``True``
+        :raises Exception: re-raises whatever
+            ``_run_process_payment`` raised, after recording it on
+            this line, so the queue job ends up ``failed``
         """
         self.ensure_one()
         if self.state in ("done", "ignored"):
@@ -248,11 +260,40 @@ Solution: Verify the Date Format on the import Type matches the actual data,
             with self.env.cr.savepoint():
                 already_resolved = self._run_process_payment()
         except Exception as error:  # pylint: disable=broad-except
-            self.write({"state": "error", "error_message": str(error)})
-            return True
+            self._write_error_result(str(error))
+            raise
         if already_resolved:
             return True
         self.write({"state": "done", "error_message": False})
+        return True
+
+    def _write_error_result(self, message):
+        """Record a processing failure so it survives the rollback.
+
+        Writes ``state='error'`` and ``error_message=message``
+        through a brand-new cursor obtained from the registry, and
+        commits it immediately -- by the time this is called from
+        ``_process_payment``, the caller's own transaction is about
+        to be rolled back entirely once the triggering exception
+        propagates, so writing through ``self.env.cr`` would be lost.
+
+        Fallback: when this record is not yet visible to the new
+        cursor (``exists()`` empty -- e.g. the record was created
+        earlier in the same, not-yet-committed transaction, as
+        happens in unit tests), write through the running cursor
+        instead.
+
+        :param message: error message to store on ``error_message``
+        :return: ``True``
+        """
+        self.ensure_one()
+        with registry(self.env.cr.dbname).cursor() as new_cr:
+            new_env = api.Environment(new_cr, self.env.uid, self.env.context)
+            record = new_env[self._name].browse(self.id)
+            if record.exists():
+                record.write({"state": "error", "error_message": message})
+                return True
+        self.write({"state": "error", "error_message": message})
         return True
 
     def _check_exclude(self, row):
@@ -495,14 +536,48 @@ Solution: Fill in the ignore reason before ignoring this line"""
         self.import_id._try_action_done()
 
     def _retry(self):
-        """Reset the line to ``draft`` and process it again.
+        """Reset the line to ``draft`` and requeue it for processing.
 
-        Clears ``error_message``, calls ``_process_payment``, then
-        re-evaluates the parent import's completion.
+        Raises ``UserError`` unless the line is currently ``draft``
+        or ``error`` -- retrying a ``done``/``ignored`` line would
+        silently reprocess an already-settled row. Clears
+        ``error_message``, then requeues through the job queue
+        instead of calling ``_process_payment`` synchronously: when
+        ``queue_job_id`` is set, ``queue_job_id.requeue()`` puts that
+        job back to ``pending`` so the job runner executes it again;
+        when it is empty (rows created before this field was
+        tracked), a brand-new job is enqueued the same way
+        ``_01_create_payment_on_queue_done`` does, and its record is
+        stored back on ``queue_job_id``. Finally re-evaluates the
+        parent import's completion.
         """
         self.ensure_one()
+        if self.state not in ("draft", "error"):
+            raise UserError(
+                _(
+                    """
+Context: Retrying customer payment import data line
+Document: %s (sequence %s)
+Problem: This line is in state '%s' and cannot be retried
+Solution: Only lines in Draft or Error state can be retried"""
+                )
+                % (
+                    self.import_id.name or str(self.import_id.id),
+                    self.sequence,
+                    self.state,
+                )
+            )
         self.write({"state": "draft", "error_message": False})
-        self._process_payment()
+        if self.queue_job_id:
+            self.queue_job_id.requeue()
+        else:
+            description = "Create customer payment for data line ID %s" % self.id
+            job = (
+                self.with_context(job_batch=self.import_id.done_queue_job_batch_id)
+                .with_delay(description=_(description))
+                ._process_payment()
+            )
+            self.queue_job_id = job.db_record().id
         self.import_id._try_action_done()
 
     def _force_queue_job_done(self):
