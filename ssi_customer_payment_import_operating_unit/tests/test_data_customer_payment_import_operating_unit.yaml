@@ -75,3 +75,279 @@ scenarios:
           operating_unit_id:
             type: "m2o"
             expected_xml_id: "operating_unit.main_operating_unit"
+
+  - name: "Customer Payment Import - Operating Unit journal filter"
+    steps:
+      - step: "Create operating unit X"
+        action: "create"
+        model: "operating.unit"
+        save_as: "ou_filter_x"
+        values:
+          name: "OU Filter Test X"
+          code: "OUFX1"
+          partner_id: "REF: base.main_partner"
+
+      - step: "Create operating unit Y"
+        action: "create"
+        model: "operating.unit"
+        save_as: "ou_filter_y"
+        values:
+          name: "OU Filter Test Y"
+          code: "OUFY1"
+          partner_id: "REF: base.main_partner"
+
+      - step: "Create journal A scoped to operating unit X"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal_filter_a"
+        values:
+          name: "OU Filter Journal A"
+          type: "bank"
+          operating_unit_ids:
+            - - 6
+              - 0
+              - - "REC: ou_filter_x.id"
+
+      - step: "Create journal B scoped to operating unit Y"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal_filter_b"
+        values:
+          name: "OU Filter Journal B"
+          type: "bank"
+          operating_unit_ids:
+            - - 6
+              - 0
+              - - "REC: ou_filter_y.id"
+
+      - step: "Create journal C without operating unit restriction"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal_filter_c"
+        values:
+          name: "OU Filter Journal C"
+          type: "bank"
+
+      - step: "Create type manually restricted to journals A, B and C"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype_filter"
+        values:
+          name: "OU Filter Test Type"
+          code: "OUFLT01"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          journal_selection_method: "manual"
+          journal_ids:
+            - - 6
+              - 0
+              - - "REC: journal_filter_a.id"
+                - "REC: journal_filter_b.id"
+                - "REC: journal_filter_c.id"
+
+      - step: "Create import document with operating_unit_id = OU X"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_filter"
+        as_user: "base.user_admin"
+        values:
+          type_id: "REC: ctype_filter.id"
+          operating_unit_id: "REC: ou_filter_x.id"
+          journal_id: "REC: journal_filter_a.id"
+
+      - step: "Assert allowed_journal_ids keeps A and C, drops B"
+        action: "assert"
+        target: "import_filter"
+        asserts:
+          allowed_journal_ids:
+            type: "m2m"
+            check: "exact"
+            expected_records:
+              - "REC: journal_filter_a"
+              - "REC: journal_filter_c"
+
+  - name: "Customer Payment Import - Operating Unit onchange clears mismatched journal"
+    steps:
+      - step: "Create operating unit X"
+        action: "create"
+        model: "operating.unit"
+        save_as: "ou_onchange_x"
+        values:
+          name: "OU Onchange Test X"
+          code: "OUOX1"
+          partner_id: "REF: base.main_partner"
+
+      - step: "Create operating unit Y"
+        action: "create"
+        model: "operating.unit"
+        save_as: "ou_onchange_y"
+        values:
+          name: "OU Onchange Test Y"
+          code: "OUOY1"
+          partner_id: "REF: base.main_partner"
+
+      - step: "Create journal scoped to operating unit X"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal_onchange_x"
+        values:
+          name: "OU Onchange Journal X"
+          type: "bank"
+          operating_unit_ids:
+            - - 6
+              - 0
+              - - "REC: ou_onchange_x.id"
+
+      - step: "Create journal without operating unit restriction"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal_onchange_cross"
+        values:
+          name: "OU Onchange Journal Cross"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype_onchange"
+        values:
+          name: "OU Onchange Test Type"
+          code: "OUOC001"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Changing OU clears a journal restricted to a different OU"
+        action: "form"
+        model: "customer_payment_import"
+        as_user: "base.user_admin"
+        save: false
+        ops:
+          - set:
+              type_id: "REC: ctype_onchange"
+          - set:
+              operating_unit_id: "REC: ou_onchange_x"
+          - set:
+              journal_id: "REC: journal_onchange_x"
+          - set:
+              operating_unit_id: "REC: ou_onchange_y"
+          - assert:
+              journal_id:
+                type: "value"
+                operator: "is_falsy"
+
+      - step: "Changing OU keeps a journal without OU restriction"
+        action: "form"
+        model: "customer_payment_import"
+        as_user: "base.user_admin"
+        save: false
+        ops:
+          - set:
+              type_id: "REC: ctype_onchange"
+          - set:
+              operating_unit_id: "REC: ou_onchange_x"
+          - set:
+              journal_id: "REC: journal_onchange_cross"
+          - set:
+              operating_unit_id: "REC: ou_onchange_y"
+          - assert:
+              journal_id:
+                type: "m2o"
+                expected: "REC: journal_onchange_cross"
+
+  - name: "Customer Payment Import - Operating Unit journal constrain"
+    steps:
+      - step: "Create operating unit X"
+        action: "create"
+        model: "operating.unit"
+        save_as: "ou_constrain_x"
+        values:
+          name: "OU Constrain Test X"
+          code: "OUCX1"
+          partner_id: "REF: base.main_partner"
+
+      - step: "Create operating unit Y"
+        action: "create"
+        model: "operating.unit"
+        save_as: "ou_constrain_y"
+        values:
+          name: "OU Constrain Test Y"
+          code: "OUCY1"
+          partner_id: "REF: base.main_partner"
+
+      - step: "Create journal scoped to operating unit X"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal_constrain_x"
+        values:
+          name: "OU Constrain Journal X"
+          type: "bank"
+          operating_unit_ids:
+            - - 6
+              - 0
+              - - "REC: ou_constrain_x.id"
+
+      - step: "Create journal without operating unit restriction"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal_constrain_cross"
+        values:
+          name: "OU Constrain Journal Cross"
+          type: "bank"
+
+      - step: "Create type manually restricted to both constrain journals"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype_constrain"
+        values:
+          name: "OU Constrain Test Type"
+          code: "OUCON01"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          journal_selection_method: "manual"
+          journal_ids:
+            - - 6
+              - 0
+              - - "REC: journal_constrain_x.id"
+                - "REC: journal_constrain_cross.id"
+
+      - step: "Matching operating unit and journal is accepted"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_constrain_ok"
+        as_user: "base.user_admin"
+        values:
+          type_id: "REC: ctype_constrain.id"
+          journal_id: "REC: journal_constrain_x.id"
+          operating_unit_id: "REC: ou_constrain_x.id"
+
+      - step: "Mismatched operating unit and journal is rejected"
+        action: "create"
+        model: "customer_payment_import"
+        as_user: "base.user_admin"
+        expect_error:
+          type: "UserError"
+        values:
+          type_id: "REC: ctype_constrain.id"
+          journal_id: "REC: journal_constrain_x.id"
+          operating_unit_id: "REC: ou_constrain_y.id"
+
+      - step: "Journal without OU restriction never triggers the constrain"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_constrain_cross"
+        as_user: "base.user_admin"
+        values:
+          type_id: "REC: ctype_constrain.id"
+          journal_id: "REC: journal_constrain_cross.id"
+          operating_unit_id: "REC: ou_constrain_y.id"
+
+      - step: "Assert cross-OU journal document was created without error"
+        action: "assert"
+        target: "import_constrain_cross"
+        asserts:
+          journal_id:
+            type: "m2o"
+            expected: "REC: journal_constrain_cross"
