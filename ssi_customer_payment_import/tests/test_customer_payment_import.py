@@ -162,3 +162,79 @@ class TestCustomerPaymentImport(YamlTransactionCase):
         self.assertEqual(action["res_model"], "edit_customer_payment_import_data")
         self.assertEqual(action["target"], "new")
         self.assertEqual(action["context"]["default_data_id"], data_line.id)
+
+    def _create_failed_job_data_line(self, code):
+        """Build a data line with a real, previously-``failed`` job.
+
+        Pure Python -- trigger P1 (L-01: ``with_delay()._process_payment()``
+        chains two method calls into one expression -- ``with_delay()``
+        returns a delayable, and only then is ``_process_payment``
+        called on it -- which YAML's ``call`` action cannot express,
+        since it only supports a single ``target.method(*args,
+        **kwargs)`` dispatch, not chaining).
+
+        Enqueues the job without ``queue_job__no_delay``, so
+        ``with_delay()`` genuinely stores a ``queue.job`` record
+        (state ``pending``) instead of running the job body inline.
+        The job is then flipped to ``failed`` directly -- ``state``
+        is not one of ``queue.job``'s protected fields, so this does
+        not need the ``EDIT_SENTINEL`` bypass -- to simulate a data
+        line whose previous processing attempt failed.
+
+        :param code: unique ``code`` value for the fixture type
+        :return: tuple of (data line, its ``queue.job`` record)
+        """
+        ctype = self._create_type(code=code)
+        journal = self._create_bank_journal("Test Journal %s" % code)
+        import_doc = self.env["customer_payment_import"].create(
+            {"type_id": ctype.id, "journal_id": journal.id}
+        )
+        data_line = self.env["customer_payment_import.data"].create(
+            {"import_id": import_doc.id, "sequence": 1}
+        )
+        job = data_line.with_delay(description="Test job %s" % code)._process_payment()
+        job_record = job.db_record()
+        job_record.write({"state": "failed"})
+        data_line.write(
+            {
+                "state": "error",
+                "error_message": "Sample error before retry/ignore",
+                "queue_job_id": job_record.id,
+            }
+        )
+        return data_line, job_record
+
+    def test_retry_requeues_existing_failed_job(self):
+        """``action_retry`` requeues an existing ``failed`` job.
+
+        Pure Python -- trigger P1 (L-01: fixture needs
+        ``with_delay()._process_payment()`` chaining, see
+        ``_create_failed_job_data_line``).
+
+        The job is put back to ``pending`` (so the job runner picks
+        it up again) and the line is reset to ``draft`` with no
+        error message, without ``_retry`` ever calling
+        ``_process_payment`` synchronously.
+        """
+        data_line, job_record = self._create_failed_job_data_line("PYTT-RETRYQ")
+
+        data_line.action_retry()
+
+        self.assertEqual(job_record.state, "pending")
+        self.assertEqual(data_line.state, "draft")
+        self.assertFalse(data_line.error_message)
+
+    def test_ignore_forces_existing_failed_job_done(self):
+        """``action_ignore`` forces an existing ``failed`` job to ``done``.
+
+        Pure Python -- trigger P1 (L-01: fixture needs
+        ``with_delay()._process_payment()`` chaining, see
+        ``_create_failed_job_data_line``).
+        """
+        data_line, job_record = self._create_failed_job_data_line("PYTT-IGNOREQ")
+        data_line.ignore_reason = "Duplicate row, safe to ignore"
+
+        data_line.action_ignore()
+
+        self.assertEqual(data_line.state, "ignored")
+        self.assertEqual(job_record.state, "done")

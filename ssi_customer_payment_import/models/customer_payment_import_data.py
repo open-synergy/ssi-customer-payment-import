@@ -277,6 +277,14 @@ Solution: Verify the Date Format on the import Type matches the actual data,
         to be rolled back entirely once the triggering exception
         propagates, so writing through ``self.env.cr`` would be lost.
 
+        Flushes ``self.env`` first, through the still-valid running
+        cursor. Odoo's pending-recompute queue is shared by every
+        environment in the current thread, regardless of which
+        cursor created them, so leaving it unflushed would make the
+        new cursor's commit below try to recompute records that only
+        exist in this (uncommitted) transaction, using a connection
+        that cannot see them.
+
         Fallback: when this record is not yet visible to the new
         cursor (``exists()`` empty -- e.g. the record was created
         earlier in the same, not-yet-committed transaction, as
@@ -287,6 +295,7 @@ Solution: Verify the Date Format on the import Type matches the actual data,
         :return: ``True``
         """
         self.ensure_one()
+        self.env["base"].flush()
         with registry(self.env.cr.dbname).cursor() as new_cr:
             new_env = api.Environment(new_cr, self.env.uid, self.env.context)
             record = new_env[self._name].browse(self.id)
