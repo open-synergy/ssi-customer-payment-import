@@ -12,6 +12,7 @@
     "depends": [
         "ssi_customer_payment_import",
         "ssi_operating_unit_mixin",
+        "ssi_financial_accounting_operating_unit",
     ],
     "data": [
         "security/res_group/res_group_data.xml",

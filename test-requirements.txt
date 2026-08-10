@@ -8,3 +8,4 @@ odoo14-addon-ssi-transaction-queue-done-mixin
 odoo14-addon-ssi-transaction-queue-cancel-mixin
 odoo14-addon-queue-job-batch
 odoo14-addon-ssi-operating-unit-mixin
+odoo14-addon-ssi-financial-accounting-operating-unit
