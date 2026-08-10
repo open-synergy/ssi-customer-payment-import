@@ -238,6 +238,11 @@ class CustomerPaymentImportType(models.Model):
     )
 
     def _get_column_delimiter_character(self):
+        """Translate the ``delimiter`` selection into its CSV character.
+
+        :return: the delimiter character; defaults to ``","`` when
+            ``delimiter`` is unset or unrecognized
+        """
         self.ensure_one()
         return {
             "comma": ",",

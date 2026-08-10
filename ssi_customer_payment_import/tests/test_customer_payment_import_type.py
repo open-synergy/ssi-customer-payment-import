@@ -9,5 +9,8 @@ from odoo.tests import tagged
 
 @tagged("post_install", "-at_install")
 class TestCustomerPaymentImportType(YamlTransactionCase):
+    """Cover the ``customer_payment_import_type`` master data model."""
+
     def test_customer_payment_import_type(self):
+        """Run the ``customer_payment_import_type`` YAML scenario."""
         self.run_yaml_scenario("test_data_customer_payment_import_type.yaml")

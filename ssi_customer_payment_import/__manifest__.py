@@ -37,6 +37,9 @@
         # Security - access
         "security/ir_model_access/customer_payment_import_type.xml",
         "security/ir_model_access/customer_payment_import.xml",
+        "security/ir_model_access/ignore_customer_payment_import_error.xml",
+        "security/ir_model_access/ignore_customer_payment_import_data.xml",
+        "security/ir_model_access/edit_customer_payment_import_data.xml",
         # Security - rules
         "security/ir_rule/customer_payment_import.xml",
         # Sequence & templates
@@ -47,6 +50,10 @@
         # Queue automation
         "data/ir_actions_server_data.xml",
         "data/base_automation_data.xml",
+        # Wizards
+        "wizards/ignore_customer_payment_import_error_views.xml",
+        "wizards/ignore_customer_payment_import_data_views.xml",
+        "wizards/edit_customer_payment_import_data_views.xml",
         # Views
         "views/customer_payment_import_type_views.xml",
         "views/customer_payment_import_views.xml",

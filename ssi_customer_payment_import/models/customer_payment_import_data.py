@@ -46,6 +46,40 @@ class CustomerPaymentImportData(models.Model):  # pylint: disable=too-few-public
         copy=False,
         help="The customer payment created from this data line.",
     )
+    state = fields.Selection(
+        string="Status",
+        selection=[
+            ("draft", "Draft"),
+            ("done", "Done"),
+            ("error", "Error"),
+            ("ignored", "Ignored"),
+        ],
+        default="draft",
+        required=True,
+        readonly=True,
+        copy=False,
+        help="Processing status of this data line.",
+    )
+    error_message = fields.Text(
+        string="Error Message",
+        readonly=True,
+        copy=False,
+        help="Reason why this data line failed to be converted into a "
+        "customer payment.",
+    )
+    ignore_reason = fields.Text(
+        string="Ignore Reason",
+        copy=False,
+        help="Reason why this data line is excluded from the import.",
+    )
+    queue_job_id = fields.Many2one(
+        string="Queue Job",
+        comodel_name="queue.job",
+        readonly=True,
+        ondelete="set null",
+        copy=False,
+        help="Queue job that processes this data line.",
+    )
     partner_id = fields.Many2one(
         string="Partner",
         comodel_name="res.partner",
@@ -72,6 +106,11 @@ class CustomerPaymentImportData(models.Model):  # pylint: disable=too-few-public
     )
 
     def _get_row_data(self):
+        """Decode ``data`` (raw JSON row) into a plain dict.
+
+        :return: dict of column name/index to cell value; empty dict
+            when ``data`` is empty or not valid JSON
+        """
         self.ensure_one()
         if not self.data:
             return {}
@@ -81,6 +120,10 @@ class CustomerPaymentImportData(models.Model):  # pylint: disable=too-few-public
             return {}
 
     def _get_type(self):
+        """Return the import Type of this line's parent document.
+
+        :return: ``customer_payment_import_type`` record
+        """
         self.ensure_one()
         return self.import_id.type_id
 
@@ -183,10 +226,37 @@ Solution: Verify the Date Format on the import Type matches the actual data,
     # Queue job methods
     # -------------------------------------------------------------------
 
-    def _process_payment(self):  # pylint: disable=too-many-locals
+    def _process_payment(self):
+        """Entry point called by the queue job.
+
+        Runs the actual conversion inside a savepoint so that any
+        partially created payment is rolled back on failure. Failures
+        never raise out of the job: they are recorded on the line as
+        ``state='error'`` instead, so the queue job itself always ends
+        up ``done``.
+
+        :return: ``True``
+        """
+        self.ensure_one()
+        if self.state in ("done", "ignored"):
+            return True
+        try:
+            with self.env.cr.savepoint():
+                self._run_process_payment()
+        except Exception as error:  # pylint: disable=broad-except
+            self.write({"state": "error", "error_message": str(error)})
+            return True
+        self.write({"state": "done", "error_message": False})
+        return True
+
+    def _run_process_payment(self):  # pylint: disable=too-many-locals
         """Parse the raw JSON data line and create an account.payment
         according to the import Type's column mapping. Idempotent: if
-        payment_id is already set, skip to prevent duplicates on retry."""
+        payment_id is already set, does nothing, so a retry never
+        creates a duplicate payment.
+
+        :return: ``None``
+        """
         self.ensure_one()
         if self.payment_id:
             return
@@ -232,6 +302,15 @@ Solution: Register the bank account on the partner (res.partner.bank),
         self.payment_id = payment.id
 
     def _prepare_payment_data(self, partner, amount, payment_date, communication):
+        """Build the ``create`` vals for the resulting ``account.payment``.
+
+        :param partner: ``res.partner`` record to pay
+        :param amount: payment amount
+        :param payment_date: payment date
+        :param communication: payment reference/communication, or
+            ``False``
+        :return: dict of vals for ``account.payment``
+        """
         self.ensure_one()
         imp = self.import_id
         vals = {
@@ -260,3 +339,137 @@ Solution: Register the bank account on the partner (res.partner.bank),
             payment.action_cancel()
         elif payment.state == "draft":
             payment.unlink()
+
+    # -------------------------------------------------------------------
+    # Action methods
+    # -------------------------------------------------------------------
+
+    def action_ignore(self):
+        """Ignore the selected data lines.
+
+        Delegates to ``_ignore`` under ``sudo``.
+        """
+        for record in self.sudo():
+            record._ignore()
+
+    def action_retry(self):
+        """Retry processing the selected data lines.
+
+        Delegates to ``_retry`` under ``sudo``.
+        """
+        for record in self.sudo():
+            record._retry()
+
+    def action_open_ignore_wizard(self):
+        """Open the wizard used to fill in the ignore reason.
+
+        Delegates to ``_open_ignore_wizard`` under ``sudo``.
+
+        :return: an ``ir.actions.act_window`` dict
+        """
+        for record in self.sudo():
+            result = record._open_ignore_wizard()
+        return result
+
+    def action_open_edit_data_wizard(self):
+        """Open the wizard used to edit this line's raw JSON data.
+
+        Delegates to ``_open_edit_data_wizard`` under ``sudo``.
+
+        :return: an ``ir.actions.act_window`` dict
+        """
+        for record in self.sudo():
+            result = record._open_edit_data_wizard()
+        return result
+
+    def _open_ignore_wizard(self):
+        """Build the window action for the ignore-reason wizard.
+
+        :return: a copy of the ignore wizard action, with
+            ``default_data_id`` set in its context to this record
+        """
+        self.ensure_one()
+        waction = self.env.ref(
+            "ssi_customer_payment_import.ignore_customer_payment_import_data_action"
+        ).read()[0]
+        waction.update({"context": {"default_data_id": self.id}})
+        return waction
+
+    def _open_edit_data_wizard(self):
+        """Build the window action for the edit-data wizard.
+
+        :return: a copy of the edit-data wizard action, with
+            ``default_data_id`` set in its context to this record
+        """
+        self.ensure_one()
+        waction = self.env.ref(
+            "ssi_customer_payment_import.edit_customer_payment_import_data_action"
+        ).read()[0]
+        waction.update({"context": {"default_data_id": self.id}})
+        return waction
+
+    def _ignore(self):
+        """Move the line to ``ignored`` after validating its state.
+
+        Raises ``UserError`` when the line is not in ``draft``/
+        ``error`` state, or when ``ignore_reason`` is empty. Also
+        forces the linked queue job to ``done`` and re-evaluates the
+        parent import's completion.
+        """
+        self.ensure_one()
+        if self.state not in ("draft", "error"):
+            raise UserError(
+                _(
+                    """
+Context: Ignoring customer payment import data line
+Document: %s (sequence %s)
+Problem: This line is in state '%s' and cannot be ignored
+Solution: Only lines in Draft or Error state can be ignored"""
+                )
+                % (
+                    self.import_id.name or str(self.import_id.id),
+                    self.sequence,
+                    self.state,
+                )
+            )
+        if not self.ignore_reason:
+            raise UserError(
+                _(
+                    """
+Context: Ignoring customer payment import data line
+Document: %s (sequence %s)
+Problem: Ignore reason is empty
+Solution: Fill in the ignore reason before ignoring this line"""
+                )
+                % (self.import_id.name or str(self.import_id.id), self.sequence)
+            )
+        self.write({"state": "ignored"})
+        self._force_queue_job_done()
+        self.import_id._try_action_done()
+
+    def _retry(self):
+        """Reset the line to ``draft`` and process it again.
+
+        Clears ``error_message``, calls ``_process_payment``, then
+        re-evaluates the parent import's completion.
+        """
+        self.ensure_one()
+        self.write({"state": "draft", "error_message": False})
+        self._process_payment()
+        self.import_id._try_action_done()
+
+    def _force_queue_job_done(self):
+        """Force this line's queue job to ``done`` if not already.
+
+        Lines created before ``queue_job_id`` was tracked have no job
+        link here; those are swept up separately by the import's
+        ``_force_pending_queue_job_done``.
+
+        :return: ``True``
+        """
+        self.ensure_one()
+        if self.queue_job_id:
+            if self.queue_job_id.state != "done":
+                self.queue_job_id.button_done()
+            return True
+        return True
