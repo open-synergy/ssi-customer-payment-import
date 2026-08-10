@@ -233,7 +233,11 @@ Solution: Verify the Date Format on the import Type matches the actual data,
         partially created payment is rolled back on failure. Failures
         never raise out of the job: they are recorded on the line as
         ``state='error'`` instead, so the queue job itself always ends
-        up ``done``.
+        up ``done``. When ``_run_process_payment`` reports that the
+        line already resolved itself (currently: excluded rows,
+        written to ``state='ignored'``), the final unconditional
+        ``state='done'`` write below is skipped, otherwise it would
+        overwrite the ``ignored`` state.
 
         :return: ``True``
         """
@@ -242,11 +246,47 @@ Solution: Verify the Date Format on the import Type matches the actual data,
             return True
         try:
             with self.env.cr.savepoint():
-                self._run_process_payment()
+                already_resolved = self._run_process_payment()
         except Exception as error:  # pylint: disable=broad-except
             self.write({"state": "error", "error_message": str(error)})
             return True
+        if already_resolved:
+            return True
         self.write({"state": "done", "error_message": False})
+        return True
+
+    def _check_exclude(self, row):
+        """Check whether ``row`` must be discarded before processing.
+
+        Based on the import Type's Exclude Column / Exclude Values.
+        When it matches, this line is written directly to
+        ``state='ignored'`` with an auto-filled ``ignore_reason``, and
+        ``payment_id`` is never touched.
+
+        :param row: dict of column name/index to cell value, as
+            returned by ``_get_row_data``
+        :return: ``True`` when the row was excluded, ``False``
+            otherwise
+        """
+        self.ensure_one()
+        ctype = self._get_type()
+        exclude_tokens = ctype._get_exclude_value_tokens()
+        if not exclude_tokens:
+            return False
+        value = str(row.get(ctype.exclude_column, "") or "").strip()
+        if value not in exclude_tokens:
+            return False
+        self.write(
+            {
+                "state": "ignored",
+                "ignore_reason": _(
+                    "Row excluded before processing: column '%s' has value "
+                    "'%s', which matches the Exclude Values configured on "
+                    "the import Type."
+                )
+                % (ctype.exclude_column, value),
+            }
+        )
         return True
 
     def _run_process_payment(self):  # pylint: disable=too-many-locals
@@ -255,15 +295,22 @@ Solution: Verify the Date Format on the import Type matches the actual data,
         payment_id is already set, does nothing, so a retry never
         creates a duplicate payment.
 
-        :return: ``None``
+        :return: ``True`` when the line already resolved itself
+            (currently: excluded rows written to ``state='ignored'``),
+            meaning the caller must not overwrite it with
+            ``state='done'``; a falsy value for the normal
+            create-payment path
         """
         self.ensure_one()
         if self.payment_id:
-            return
+            return False
 
         ctype = self._get_type()
         row = self._get_row_data()
         imp = self.import_id
+
+        if self._check_exclude(row):
+            return True
 
         acc_number = row.get(ctype.partner_bank_account_column)
         partner = self._find_partner_by_bank_account(acc_number)

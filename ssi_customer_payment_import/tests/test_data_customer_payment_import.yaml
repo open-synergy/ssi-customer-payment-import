@@ -1699,3 +1699,260 @@ scenarios:
           - ["journal_id", "=", "REC: journal.id"]
         save_as: "payments_after"
         expect_count: 1
+
+  - name:
+      "Customer Payment Import - Excluded row is auto-ignored, other row still processed"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Exclude Column Test Partner"
+          is_company: true
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "8001000001"
+          partner_id: "REC: partner.id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Exclude Column"
+          type: "bank"
+
+      - step:
+          "Create type with an exclusion rule (values padded with spaces and an empty
+          token, to also cover strip()/empty-token handling)"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Exclude Column Test Type"
+          code: "EXCT001"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          communication_column: "description"
+          exclude_column: "description"
+          exclude_values: " Saldo Awal , ,Saldo Akhir "
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step:
+          "Create an opening-balance row that must be excluded (unregistered account
+          number: it must never reach the partner lookup)"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line_excluded"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-05-01", "account_number": "0000000000", "amount": "0",
+            "description": "Saldo Awal"}'
+
+      - step: "Create a normal row that must still be processed"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line_normal"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 2
+          data:
+            '{"date": "2026-05-02", "account_number": "8001000001", "amount": "50000",
+            "description": "Regular Payment"}'
+
+      - step: "Confirm import"
+        action: "call"
+        target: "import_doc"
+        method: "action_confirm"
+        as_user: "base.user_admin"
+
+      - step: "Invalidate cache after confirm"
+        action: "call"
+        target: "import_doc"
+        method: "invalidate_cache"
+
+      - step: "Approve import (auto queue_done, synchronous job)"
+        action: "call"
+        target: "import_doc"
+        method: "action_approve_approval"
+        as_user: "base.user_admin"
+        context:
+          queue_job__no_delay: true
+
+      - step: "Invalidate cache after approve"
+        action: "call"
+        target: "import_doc"
+        method: "invalidate_cache"
+
+      - step: "Assert import reached done with one done and one ignored line"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          num_of_done:
+            type: "value"
+            expected: 1
+          num_of_error:
+            type: "value"
+            expected: 0
+          num_of_ignored:
+            type: "value"
+            expected: 1
+
+      - step: "Assert the excluded line is ignored with an auto-filled reason"
+        action: "assert"
+        target: "line_excluded"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "ignored"
+          ignore_reason:
+            type: "value"
+            operator: "is_truthy"
+          payment_id:
+            type: "value"
+            operator: "is_falsy"
+
+      - step: "Assert the normal line was still processed into a payment"
+        action: "assert"
+        target: "line_normal"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          payment_id:
+            type: "value"
+            operator: "is_truthy"
+
+  - name:
+      "Customer Payment Import - Exclude Column without Exclude Values excludes nothing"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Exclude Values Empty Test Partner"
+          is_company: true
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "8002000002"
+          partner_id: "REC: partner.id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Exclude Values Empty"
+          type: "bank"
+
+      - step: "Create type with Exclude Column set but Exclude Values empty"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Exclude Values Empty Test Type"
+          code: "EXCT002"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          communication_column: "description"
+          exclude_column: "description"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step:
+          "Create a row whose Exclude Column value is empty -- must NOT be excluded
+          since Exclude Values is not configured"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-05-03", "account_number": "8002000002", "amount": "1000",
+            "description": ""}'
+
+      - step: "Confirm import"
+        action: "call"
+        target: "import_doc"
+        method: "action_confirm"
+        as_user: "base.user_admin"
+
+      - step: "Invalidate cache after confirm"
+        action: "call"
+        target: "import_doc"
+        method: "invalidate_cache"
+
+      - step: "Approve import (auto queue_done, synchronous job)"
+        action: "call"
+        target: "import_doc"
+        method: "action_approve_approval"
+        as_user: "base.user_admin"
+        context:
+          queue_job__no_delay: true
+
+      - step: "Invalidate cache after approve"
+        action: "call"
+        target: "import_doc"
+        method: "invalidate_cache"
+
+      - step: "Assert import reached done with no line ignored"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          num_of_done:
+            type: "value"
+            expected: 1
+          num_of_ignored:
+            type: "value"
+            expected: 0
+
+      - step: "Assert the line was processed normally, not excluded"
+        action: "assert"
+        target: "line"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          payment_id:
+            type: "value"
+            operator: "is_truthy"
+          ignore_reason:
+            type: "value"
+            operator: "is_falsy"
