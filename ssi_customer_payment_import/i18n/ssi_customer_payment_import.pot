@@ -93,6 +93,17 @@ msgid ""
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: code:addons/ssi_customer_payment_import/models/customer_payment_import_data.py:0
+#, python-format
+msgid ""
+"\n"
+"Context: Retrying customer payment import data line\n"
+"Document: %s (sequence %s)\n"
+"Problem: This line is in state '%s' and cannot be retried\n"
+"Solution: Only lines in Draft or Error state can be retried"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__num_of_data
 msgid "# Data"
 msgstr ""
