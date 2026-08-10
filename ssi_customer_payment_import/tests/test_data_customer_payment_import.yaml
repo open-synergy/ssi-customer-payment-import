@@ -974,28 +974,22 @@ scenarios:
           type_id: "REC: ctype.id"
           journal_id: "REC: journal.id"
 
-      - step: "Create data line with wrong (unregistered) account number"
+      - step:
+          "Create an error data line with a wrong (unregistered) account number, as if a
+          previous processing attempt had already failed it (calling _process_payment
+          here and asserting the resulting state would not work: expect_error wraps the
+          call in a savepoint that gets rolled back, so the write is lost -- same
+          reasoning as the _write_error_result scenario above)"
         action: "create"
         model: "customer_payment_import.data"
         save_as: "data_line"
         values:
           import_id: "REC: import_doc.id"
           sequence: 1
+          state: "error"
+          error_message: "No partner found with bank account number '0000000000'"
           data:
             '{"date": "2026-04-02", "account_number": "0000000000", "amount": "5000"}'
-
-      - step: "Process the data line, expect error"
-        action: "call"
-        target: "data_line"
-        method: "_process_payment"
-
-      - step: "Assert data line is in error state"
-        action: "assert"
-        target: "data_line"
-        asserts:
-          state:
-            type: "value"
-            expected: "error"
 
       - step: "Correct the raw data via the edit-data wizard"
         action: "wizard"
