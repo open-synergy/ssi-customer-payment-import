@@ -699,7 +699,7 @@ scenarios:
         expect_count: 1
 
   - name:
-      "Customer Payment Import Data - Error line goes to error state without raising"
+      "Customer Payment Import Data - _process_payment raises on unknown bank account"
     steps:
       - step: "Create bank journal"
         action: "create"
@@ -738,24 +738,196 @@ scenarios:
           data:
             '{"date": "2026-04-01", "account_number": "9990000001", "amount": "1000"}'
 
-      - step: "Process the data line via the queue entry point"
+      - step: "Process the data line via the queue entry point, expect it to raise"
         action: "call"
         target: "data_line"
         method: "_process_payment"
+        expect_error:
+          type: "UserError"
+          message_contains: "No partner found"
 
-      - step: "Assert data line ended in error state without raising"
+  - name: "Customer Payment Import Data - _write_error_result records the error"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Write Error Result"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Write Error Result Test Type"
+          code: "ERLT018"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create a draft data line"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+
+      - step: "Call _write_error_result directly with a message"
+        action: "call"
+        target: "data_line"
+        method: "_write_error_result"
+        args:
+          - "Simulated failure for _write_error_result test"
+
+      - step: "Assert the line recorded the error"
         action: "assert"
         target: "data_line"
+        refresh: true
         asserts:
           state:
             type: "value"
             expected: "error"
           error_message:
             type: "value"
-            operator: "is_truthy"
-          payment_id:
+            expected: "Simulated failure for _write_error_result test"
+
+  - name: "Customer Payment Import Data - Retry without queue_job_id enqueues a new job"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Retry New Job Test Partner"
+          is_company: true
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "9990000020"
+          partner_id: "REC: partner.id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Retry New Job"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Retry New Job Test Type"
+          code: "ERLT016"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create error data line without a queue_job_id, valid data"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          state: "error"
+          error_message: "Sample error before retry"
+          data:
+            '{"date": "2026-04-07", "account_number": "9990000020", "amount": "6000"}'
+
+      - step: "Retry the line, job runs inline"
+        action: "call"
+        target: "data_line"
+        method: "action_retry"
+        context:
+          queue_job__no_delay: true
+
+      - step:
+          "Assert the line resolved to done with a payment (queue_job_id stays empty:
+          `queue_job__no_delay` runs the job body inline without ever storing a
+          queue.job row)"
+        action: "assert"
+        target: "data_line"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          error_message:
             type: "value"
             operator: "is_falsy"
+          payment_id:
+            type: "value"
+            operator: "is_truthy"
+
+  - name: "Customer Payment Import Data - Retrying a done line raises"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Retry Done"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Retry Done Test Type"
+          code: "ERLT020"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create a data line already resolved to done"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          state: "done"
+
+      - step: "Attempt to retry the done line"
+        action: "call"
+        target: "data_line"
+        method: "action_retry"
+        expect_error:
+          type: "UserError"
 
   - name: "Customer Payment Import Data - Edit raw data then retry resolves the line"
     steps:
@@ -802,28 +974,22 @@ scenarios:
           type_id: "REC: ctype.id"
           journal_id: "REC: journal.id"
 
-      - step: "Create data line with wrong (unregistered) account number"
+      - step:
+          "Create an error data line with a wrong (unregistered) account number, as if a
+          previous processing attempt had already failed it (calling _process_payment
+          here and asserting the resulting state would not work: expect_error wraps the
+          call in a savepoint that gets rolled back, so the write is lost -- same
+          reasoning as the _write_error_result scenario above)"
         action: "create"
         model: "customer_payment_import.data"
         save_as: "data_line"
         values:
           import_id: "REC: import_doc.id"
           sequence: 1
+          state: "error"
+          error_message: "No partner found with bank account number '0000000000'"
           data:
             '{"date": "2026-04-02", "account_number": "0000000000", "amount": "5000"}'
-
-      - step: "Process the data line, expect error"
-        action: "call"
-        target: "data_line"
-        method: "_process_payment"
-
-      - step: "Assert data line is in error state"
-        action: "assert"
-        target: "data_line"
-        asserts:
-          state:
-            type: "value"
-            expected: "error"
 
       - step: "Correct the raw data via the edit-data wizard"
         action: "wizard"
@@ -845,10 +1011,12 @@ scenarios:
             type: "value"
             operator: "is_falsy"
 
-      - step: "Retry the corrected line"
+      - step: "Retry the corrected line, job runs inline"
         action: "call"
         target: "data_line"
         method: "action_retry"
+        context:
+          queue_job__no_delay: true
 
       - step: "Assert data line resolved to done with a payment linked"
         action: "assert"
@@ -1272,10 +1440,12 @@ scenarios:
             type: "value"
             expected: 0
 
-      - step: "Retry every error line at once"
+      - step: "Retry every error line at once, jobs run inline"
         action: "call"
         target: "import_doc"
         method: "action_retry_all_error"
+        context:
+          queue_job__no_delay: true
 
       - step: "Assert every error line was resolved by the single retry-all call"
         action: "assert"
