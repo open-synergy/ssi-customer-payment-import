@@ -123,9 +123,7 @@ class TestCustomerPaymentImport(YamlTransactionCase):
 
         action = data_line.action_open_ignore_wizard()
 
-        self.assertEqual(
-            action["res_model"], "ignore_customer_payment_import_data"
-        )
+        self.assertEqual(action["res_model"], "ignore_customer_payment_import_data")
         self.assertEqual(action["target"], "new")
         self.assertEqual(action["context"]["default_data_id"], data_line.id)
 

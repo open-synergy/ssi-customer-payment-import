@@ -698,7 +698,8 @@ scenarios:
         save_as: "payment"
         expect_count: 1
 
-  - name: "Customer Payment Import Data - Error line goes to error state without raising"
+  - name:
+      "Customer Payment Import Data - Error line goes to error state without raising"
     steps:
       - step: "Create bank journal"
         action: "create"
@@ -734,7 +735,8 @@ scenarios:
         values:
           import_id: "REC: import_doc.id"
           sequence: 1
-          data: '{"date": "2026-04-01", "account_number": "9990000001", "amount": "1000"}'
+          data:
+            '{"date": "2026-04-01", "account_number": "9990000001", "amount": "1000"}'
 
       - step: "Process the data line via the queue entry point"
         action: "call"
@@ -807,7 +809,8 @@ scenarios:
         values:
           import_id: "REC: import_doc.id"
           sequence: 1
-          data: '{"date": "2026-04-02", "account_number": "0000000000", "amount": "5000"}'
+          data:
+            '{"date": "2026-04-02", "account_number": "0000000000", "amount": "5000"}'
 
       - step: "Process the data line, expect error"
         action: "call"
@@ -828,8 +831,7 @@ scenarios:
         target: "data_line"
         values:
           data:
-            '{"date": "2026-04-02", "account_number": "9990000002", "amount":
-            "5000"}'
+            '{"date": "2026-04-02", "account_number": "9990000002", "amount": "5000"}'
         method: "action_confirm"
 
       - step: "Assert data line back to draft with corrected data"
@@ -1174,8 +1176,7 @@ scenarios:
             expected: 1
 
   - name:
-      "Customer Payment Import - action_retry_all_error clears every error line at
-      once"
+      "Customer Payment Import - action_retry_all_error clears every error line at once"
     steps:
       - step: "Create partner one"
         action: "create"
@@ -1246,8 +1247,7 @@ scenarios:
           state: "error"
           error_message: "Bank account was not yet registered"
           data:
-            '{"date": "2026-04-05", "account_number": "9990000010", "amount":
-            "1500"}'
+            '{"date": "2026-04-05", "account_number": "9990000010", "amount": "1500"}'
 
       - step: "Create second error data line, account not yet registered"
         action: "create"
@@ -1259,8 +1259,7 @@ scenarios:
           state: "error"
           error_message: "Bank account was not yet registered"
           data:
-            '{"date": "2026-04-06", "account_number": "9990000011", "amount":
-            "2500"}'
+            '{"date": "2026-04-06", "account_number": "9990000011", "amount": "2500"}'
 
       - step: "Assert import starts with both lines counted as error"
         action: "assert"
@@ -1491,7 +1490,8 @@ scenarios:
             type: "value"
             expected: '{"emp": "OLD"}'
 
-  - name: "Customer Payment Import - Second import with a duplicate file hash is rejected"
+  - name:
+      "Customer Payment Import - Second import with a duplicate file hash is rejected"
     steps:
       - step: "Create bank journal"
         action: "create"
@@ -1548,7 +1548,9 @@ scenarios:
         expect_error:
           type: "ValidationError"
 
-  - name: "Customer Payment Import Data - _run_process_payment raises on unknown bank account"
+  - name:
+      "Customer Payment Import Data - _run_process_payment raises on unknown bank
+      account"
     steps:
       - step: "Create bank journal"
         action: "create"
@@ -1584,7 +1586,8 @@ scenarios:
         values:
           import_id: "REC: import_doc.id"
           sequence: 1
-          data: '{"date": "2026-03-02", "account_number": "0000000000", "amount": "1000"}'
+          data:
+            '{"date": "2026-03-02", "account_number": "0000000000", "amount": "1000"}'
 
       - step: "The raw processing method raises UserError directly"
         action: "call"
@@ -1645,7 +1648,8 @@ scenarios:
         values:
           import_id: "REC: import_doc.id"
           sequence: 1
-          data: '{"date": "2026-03-03", "account_number": "7777777777", "amount": "50000"}'
+          data:
+            '{"date": "2026-03-03", "account_number": "7777777777", "amount": "50000"}'
 
       - step: "Process the data line the first time"
         action: "call"
