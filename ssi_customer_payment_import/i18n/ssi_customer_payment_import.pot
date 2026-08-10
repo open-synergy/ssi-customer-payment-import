@@ -441,6 +441,23 @@ msgid ""
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__exclude_column
+msgid ""
+"Column name (or 0-based index if No Header Line is checked) used to "
+"automatically exclude rows from being imported (e.g. opening/closing balance"
+" rows, debit mutation rows, cancelled rows). Leave empty, together with "
+"Exclude Values, to disable this feature."
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__exclude_values
+msgid ""
+"Comma-separated list of values that, when found in the Exclude Column, cause"
+" the row to be automatically ignored (e.g. 'Saldo Awal,Saldo Akhir'). Leave "
+"empty, together with Exclude Column, to disable this feature."
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__communication_column
 msgid "Communication Column"
 msgstr ""
@@ -682,6 +699,16 @@ msgstr ""
 #. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__error_message
 msgid "Error Message"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__exclude_column
+msgid "Exclude Column"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__exclude_values
+msgid "Exclude Values"
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -1277,6 +1304,14 @@ msgstr ""
 #. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__offset_row
 msgid "Row Offset"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: code:addons/ssi_customer_payment_import/models/customer_payment_import_data.py:0
+#, python-format
+msgid ""
+"Row excluded before processing: column '%s' has value '%s', which matches "
+"the Exclude Values configured on the import Type."
 msgstr ""
 
 #. module: ssi_customer_payment_import
