@@ -14,6 +14,50 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. module: ssi_customer_payment_import
+#: code:addons/ssi_customer_payment_import/wizards/edit_customer_payment_import_data.py:0
+#, python-format
+msgid ""
+"\n"
+"Context: Editing customer payment import data line raw data\n"
+"Document: %s (sequence %s)\n"
+"Problem: Data is not a valid JSON object\n"
+"Solution: Correct the data so that it is a valid JSON object, then confirm again"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: code:addons/ssi_customer_payment_import/wizards/edit_customer_payment_import_data.py:0
+#, python-format
+msgid ""
+"\n"
+"Context: Editing customer payment import data line raw data\n"
+"Document: %s (sequence %s)\n"
+"Problem: This line is in state '%s' and cannot have its raw data edited\n"
+"Solution: Only lines in Draft or Error state can be edited"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: code:addons/ssi_customer_payment_import/models/customer_payment_import_data.py:0
+#, python-format
+msgid ""
+"\n"
+"Context: Ignoring customer payment import data line\n"
+"Document: %s (sequence %s)\n"
+"Problem: Ignore reason is empty\n"
+"Solution: Fill in the ignore reason before ignoring this line"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: code:addons/ssi_customer_payment_import/models/customer_payment_import_data.py:0
+#, python-format
+msgid ""
+"\n"
+"Context: Ignoring customer payment import data line\n"
+"Document: %s (sequence %s)\n"
+"Problem: This line is in state '%s' and cannot be ignored\n"
+"Solution: Only lines in Draft or Error state can be ignored"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: code:addons/ssi_customer_payment_import/models/customer_payment_import_data.py:0
 #, python-format
 msgid ""
@@ -49,12 +93,33 @@ msgid ""
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__num_of_data
+msgid "# Data"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__name
 msgid "# Document"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__num_of_done
+msgid "# Done"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__num_of_error
+msgid "# Error"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__num_of_ignored
+msgid "# Ignored"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__import_id
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_error__import_id
 msgid "# Import"
 msgstr ""
 
@@ -290,6 +355,13 @@ msgid "Can Start Finished Queue"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.edit_customer_payment_import_data_view_form
+#: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.ignore_customer_payment_import_data_view_form
+#: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.ignore_customer_payment_import_error_view_form
+msgid "Cancel"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__cancel_reason_id
 msgid "Cancel Reason"
 msgstr ""
@@ -399,6 +471,13 @@ msgid ""
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.edit_customer_payment_import_data_view_form
+#: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.ignore_customer_payment_import_data_view_form
+#: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.ignore_customer_payment_import_error_view_form
+msgid "Confirm"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import__confirm_ok
 msgid ""
 "Confirm policy\n"
@@ -410,6 +489,9 @@ msgstr ""
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__create_uid
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__create_uid
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__create_uid
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_edit_customer_payment_import_data__create_uid
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_data__create_uid
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_error__create_uid
 msgid "Created by"
 msgstr ""
 
@@ -417,6 +499,9 @@ msgstr ""
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__create_date
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__create_date
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__create_date
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_edit_customer_payment_import_data__create_date
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_data__create_date
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_error__create_date
 msgid "Created on"
 msgstr ""
 
@@ -438,8 +523,23 @@ msgid "Customer Payment Import"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model,name:ssi_customer_payment_import.model_ignore_customer_payment_import_error
+msgid "Customer Payment Import - Bulk Ignore Errors"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model,name:ssi_customer_payment_import.model_customer_payment_import_data
 msgid "Customer Payment Import - Data"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model,name:ssi_customer_payment_import.model_edit_customer_payment_import_data
+msgid "Customer Payment Import Data - Edit Raw Data"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model,name:ssi_customer_payment_import.model_ignore_customer_payment_import_data
+msgid "Customer Payment Import Data - Ignore"
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -467,8 +567,15 @@ msgstr ""
 
 #. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__data
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_edit_customer_payment_import_data__data
 #: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.customer_payment_import_view_form
 msgid "Data"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_edit_customer_payment_import_data__data_id
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_data__data_id
+msgid "Data Line"
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -508,6 +615,9 @@ msgstr ""
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__display_name
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__display_name
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__display_name
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_edit_customer_payment_import_data__display_name
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_data__display_name
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_error__display_name
 msgid "Display Name"
 msgstr ""
 
@@ -532,6 +642,11 @@ msgid ""
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_data__state__done
+msgid "Done"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import__done_ok
 msgid ""
 "Done policy\n"
@@ -540,8 +655,33 @@ msgid ""
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_data__state__draft
+msgid "Draft"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.customer_payment_import_view_form
+msgid "Edit Data"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.actions.act_window,name:ssi_customer_payment_import.edit_customer_payment_import_data_action
+msgid "Edit Raw Data"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__file_encoding
 msgid "Encoding"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_data__state__error
+msgid "Error"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__error_message
+msgid "Error Message"
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -607,6 +747,9 @@ msgstr ""
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__id
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__id
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__id
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_edit_customer_payment_import_data__id
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_data__id
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_error__id
 msgid "ID"
 msgstr ""
 
@@ -642,6 +785,32 @@ msgid ""
 "If checked, the customer payment created from each data line is posted "
 "automatically. If unchecked, the payment is left in draft state for manual "
 "review."
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.customer_payment_import_view_form
+msgid "Ignore"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.actions.act_window,name:ssi_customer_payment_import.ignore_customer_payment_import_error_action
+#: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.customer_payment_import_view_form
+msgid "Ignore All Errors"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.actions.act_window,name:ssi_customer_payment_import.ignore_customer_payment_import_data_action
+msgid "Ignore Data Line"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__ignore_reason
+msgid "Ignore Reason"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_data__state__ignored
+msgid "Ignored"
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -713,6 +882,9 @@ msgstr ""
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import____last_update
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data____last_update
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type____last_update
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_edit_customer_payment_import_data____last_update
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_data____last_update
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_error____last_update
 msgid "Last Modified on"
 msgstr ""
 
@@ -720,6 +892,9 @@ msgstr ""
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__write_uid
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__write_uid
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__write_uid
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_edit_customer_payment_import_data__write_uid
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_data__write_uid
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_error__write_uid
 msgid "Last Updated by"
 msgstr ""
 
@@ -727,6 +902,9 @@ msgstr ""
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__write_date
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__write_date
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__write_date
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_edit_customer_payment_import_data__write_date
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_data__write_date
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_error__write_date
 msgid "Last Updated on"
 msgstr ""
 
@@ -887,6 +1065,24 @@ msgid "Number of errors"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import__num_of_ignored
+msgid "Number of import data lines excluded from the import."
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import__num_of_done
+msgid ""
+"Number of import data lines successfully converted into customer payments."
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import__num_of_error
+msgid ""
+"Number of import data lines that failed to be converted into customer "
+"payments."
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import__message_needaction_counter
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__message_needaction_counter
 msgid "Number of messages which requires an action"
@@ -940,6 +1136,11 @@ msgid "Policy Template"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_data__state
+msgid "Processing status of this data line."
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__account_selection_method__code
 #: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__journal_selection_method__code
 msgid "Python Code"
@@ -965,13 +1166,57 @@ msgid "Python strptime format string used to parse the Date Column value."
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__queue_job_id
+msgid "Queue Job"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_data__queue_job_id
+msgid "Queue job that processes this data line."
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_data__data
 msgid "Raw row data from the import file, stored as a JSON object."
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_edit_customer_payment_import_data__data
+msgid ""
+"Raw row data to replace the current data line content with, as a JSON "
+"object."
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import__data_ids
 msgid "Raw rows read from the import file, one record per row."
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_data__reason
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_error__reason
+msgid "Reason"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_ignore_customer_payment_import_error__reason
+msgid "Reason applied to every error data line that gets ignored."
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_data__error_message
+msgid ""
+"Reason why this data line failed to be converted into a customer payment."
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_data__ignore_reason
+msgid "Reason why this data line is excluded from the import."
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_ignore_customer_payment_import_data__reason
+msgid "Reason why this data line is ignored."
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -1012,6 +1257,16 @@ msgid ""
 "Restart policy\n"
 "\n"
 "* If active user can see and execute 'Restart' button"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.customer_payment_import_view_form
+msgid "Retry"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.customer_payment_import_view_form
+msgid "Retry All Errors"
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -1061,6 +1316,11 @@ msgid "State"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__state
+msgid "Status"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import__activity_state
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__activity_state
 msgid ""
@@ -1086,8 +1346,23 @@ msgid "The customer payment created from this data line."
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_ignore_customer_payment_import_data__data_id
+msgid "The import data line that will be ignored."
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_edit_customer_payment_import_data__data_id
+msgid "The import data line whose raw data will be corrected."
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_data__import_id
 msgid "The import document this line belongs to."
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_ignore_customer_payment_import_error__import_id
+msgid "The import document whose error data lines will be ignored."
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -1128,6 +1403,11 @@ msgstr ""
 #. module: ssi_customer_payment_import
 #: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.customer_payment_import_view_search
 msgid "Today"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import__num_of_data
+msgid "Total number of import data lines."
 msgstr ""
 
 #. module: ssi_customer_payment_import
