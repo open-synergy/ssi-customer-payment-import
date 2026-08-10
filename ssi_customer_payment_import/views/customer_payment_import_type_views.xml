@@ -63,6 +63,8 @@
                         <field name="amount_column" />
                         <field name="communication_column" />
                         <field name="unique_ref_column" />
+                        <field name="exclude_column" />
+                        <field name="exclude_values" />
                     </group>
                 </page>
                 <page name="payment_option" string="Payment Option">

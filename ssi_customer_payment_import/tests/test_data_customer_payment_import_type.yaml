@@ -66,6 +66,56 @@ scenarios:
             type: "value"
             expected: true
 
+  - name: "Customer Payment Import Type - Exclusion columns default empty"
+    steps:
+      - step: "Create type without exclusion configuration"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "No Exclusion Test Type"
+          code: "TBCT004"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Assert exclusion fields are empty by default"
+        action: "assert"
+        target: "ctype"
+        asserts:
+          exclude_column:
+            type: "value"
+            operator: "is_falsy"
+          exclude_values:
+            type: "value"
+            operator: "is_falsy"
+
+  - name: "Customer Payment Import Type - Exclusion columns can be configured"
+    steps:
+      - step: "Create type with exclusion configuration"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Exclusion Config Test Type"
+          code: "TBCT005"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          exclude_column: "description"
+          exclude_values: "Saldo Awal, Saldo Akhir"
+
+      - step: "Assert exclusion fields persisted"
+        action: "assert"
+        target: "ctype"
+        asserts:
+          exclude_column:
+            type: "value"
+            expected: "description"
+          exclude_values:
+            type: "value"
+            expected: "Saldo Awal, Saldo Akhir"
+
   - name: "Delete Customer Payment Import Type"
     steps:
       - step: "Create type"

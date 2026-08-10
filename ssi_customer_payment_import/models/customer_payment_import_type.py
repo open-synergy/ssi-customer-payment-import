@@ -136,6 +136,25 @@ class CustomerPaymentImportType(models.Model):
             "Used to prevent duplicate payments from being created."
         ),
     )
+    exclude_column = fields.Char(
+        string="Exclude Column",
+        help=(
+            "Column name (or 0-based index if No Header Line is checked) "
+            "used to automatically exclude rows from being imported (e.g. "
+            "opening/closing balance rows, debit mutation rows, cancelled "
+            "rows). Leave empty, together with Exclude Values, to disable "
+            "this feature."
+        ),
+    )
+    exclude_values = fields.Char(
+        string="Exclude Values",
+        help=(
+            "Comma-separated list of values that, when found in the "
+            "Exclude Column, cause the row to be automatically ignored "
+            "(e.g. 'Saldo Awal,Saldo Akhir'). Leave empty, together with "
+            "Exclude Column, to disable this feature."
+        ),
+    )
 
     # --- Payment options ---
 
@@ -251,3 +270,22 @@ class CustomerPaymentImportType(models.Model):
             "pipe": "|",
             "space": " ",
         }.get(self.delimiter, ",")
+
+    def _get_exclude_value_tokens(self):
+        """Return the Exclude Values tokens used to auto-ignore rows.
+
+        Splits ``exclude_values`` on commas, strips each token, and
+        drops empty tokens. Returns an empty list whenever
+        ``exclude_column`` or ``exclude_values`` is not configured, so
+        that an Exclude Column filled in with Exclude Values left
+        empty does not exclude every row whose column happens to be
+        blank.
+
+        :return: list of stripped, non-empty ``str`` tokens
+        """
+        self.ensure_one()
+        if not self.exclude_column or not self.exclude_values:
+            return []
+        return [
+            token.strip() for token in self.exclude_values.split(",") if token.strip()
+        ]
