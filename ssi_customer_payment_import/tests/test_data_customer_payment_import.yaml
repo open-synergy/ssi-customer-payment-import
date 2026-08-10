@@ -697,3 +697,1005 @@ scenarios:
           - ["destination_account_id", "=", "EVAL: registry['receivable_account'].id"]
         save_as: "payment"
         expect_count: 1
+
+  - name:
+      "Customer Payment Import Data - Error line goes to error state without raising"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Error Line"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Error Line Test Type"
+          code: "ERLT001"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create data line with unregistered bank account number"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-04-01", "account_number": "9990000001", "amount": "1000"}'
+
+      - step: "Process the data line via the queue entry point"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+
+      - step: "Assert data line ended in error state without raising"
+        action: "assert"
+        target: "data_line"
+        asserts:
+          state:
+            type: "value"
+            expected: "error"
+          error_message:
+            type: "value"
+            operator: "is_truthy"
+          payment_id:
+            type: "value"
+            operator: "is_falsy"
+
+  - name: "Customer Payment Import Data - Edit raw data then retry resolves the line"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Edit Retry Test Partner"
+          is_company: true
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "9990000002"
+          partner_id: "REC: partner.id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Edit Retry"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Edit Retry Test Type"
+          code: "ERLT002"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create data line with wrong (unregistered) account number"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-04-02", "account_number": "0000000000", "amount": "5000"}'
+
+      - step: "Process the data line, expect error"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+
+      - step: "Assert data line is in error state"
+        action: "assert"
+        target: "data_line"
+        asserts:
+          state:
+            type: "value"
+            expected: "error"
+
+      - step: "Correct the raw data via the edit-data wizard"
+        action: "wizard"
+        model: "edit_customer_payment_import_data"
+        target: "data_line"
+        values:
+          data:
+            '{"date": "2026-04-02", "account_number": "9990000002", "amount": "5000"}'
+        method: "action_confirm"
+
+      - step: "Assert data line back to draft with corrected data"
+        action: "assert"
+        target: "data_line"
+        asserts:
+          state:
+            type: "value"
+            expected: "draft"
+          error_message:
+            type: "value"
+            operator: "is_falsy"
+
+      - step: "Retry the corrected line"
+        action: "call"
+        target: "data_line"
+        method: "action_retry"
+
+      - step: "Assert data line resolved to done with a payment linked"
+        action: "assert"
+        target: "data_line"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          payment_id:
+            type: "value"
+            operator: "is_truthy"
+
+  - name: "Customer Payment Import Data - Ignore individual line via wizard"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Ignore Wizard"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Ignore Wizard Test Type"
+          code: "ERLT003"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create error data line"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          state: "error"
+          error_message: "Sample error for ignore wizard test"
+
+      - step: "Create a second error data line that must stay untouched"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "other_data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 2
+          state: "error"
+          error_message: "Another sample error"
+
+      - step: "Ignore the first data line via wizard"
+        action: "wizard"
+        model: "ignore_customer_payment_import_data"
+        target: "data_line"
+        values:
+          reason: "Duplicate row, safe to ignore"
+        method: "action_confirm"
+
+      - step: "Assert data line is ignored with reason"
+        action: "assert"
+        target: "data_line"
+        asserts:
+          state:
+            type: "value"
+            expected: "ignored"
+          ignore_reason:
+            type: "value"
+            expected: "Duplicate row, safe to ignore"
+
+      - step: "Assert other data line is still error"
+        action: "assert"
+        target: "other_data_line"
+        asserts:
+          state:
+            type: "value"
+            expected: "error"
+
+  - name: "Customer Payment Import - Bulk ignore all error lines via wizard"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Bulk Ignore"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Bulk Ignore Test Type"
+          code: "ERLT004"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document forced into Queue To Done state"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Force import into Queue To Done state"
+        action: "write"
+        target: "import_doc"
+        values:
+          state: "queue_done"
+
+      - step: "Create first error data line"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line_one"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          state: "error"
+          error_message: "Sample error one"
+
+      - step: "Create second error data line"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line_two"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 2
+          state: "error"
+          error_message: "Sample error two"
+
+      - step: "Assert counters before bulk ignore"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          num_of_data:
+            type: "value"
+            expected: 2
+          num_of_error:
+            type: "value"
+            expected: 2
+
+      - step: "Bulk-ignore every error line via wizard"
+        action: "wizard"
+        model: "ignore_customer_payment_import_error"
+        target: "import_doc"
+        values:
+          reason: "Batch of duplicated rows, safe to ignore"
+        method: "action_confirm"
+
+      - step: "Assert both lines ignored and import auto-completed to done"
+        action: "assert"
+        target: "import_doc"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          num_of_error:
+            type: "value"
+            expected: 0
+          num_of_ignored:
+            type: "value"
+            expected: 2
+
+  - name: "Customer Payment Import - Draft line blocks import from completing"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Draft Blocks"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Draft Blocks Done Test Type"
+          code: "ERLT005"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Force import into Queue To Done state"
+        action: "write"
+        target: "import_doc"
+        values:
+          state: "queue_done"
+
+      - step: "Create a resolved (done) data line"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line_done"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          state: "done"
+
+      - step: "Create a data line still in draft"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line_draft"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 2
+
+      - step: "Try to auto-complete the import document"
+        action: "call"
+        target: "import_doc"
+        method: "_try_action_done"
+
+      - step: "Assert import document stays in queue_done"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          state:
+            type: "value"
+            expected: "queue_done"
+
+  - name: "Customer Payment Import - Data line counters"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Counters"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Counter Test Type"
+          code: "ERLT006"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create draft data line"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line_draft"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+
+      - step: "Create done data line"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line_done"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 2
+          state: "done"
+
+      - step: "Create error data line"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line_error"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 3
+          state: "error"
+          error_message: "Sample error"
+
+      - step: "Create ignored data line"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line_ignored"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 4
+          state: "ignored"
+          ignore_reason: "Sample ignore reason"
+
+      - step: "Assert counters"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          num_of_data:
+            type: "value"
+            expected: 4
+          num_of_done:
+            type: "value"
+            expected: 1
+          num_of_error:
+            type: "value"
+            expected: 1
+          num_of_ignored:
+            type: "value"
+            expected: 1
+
+  - name:
+      "Customer Payment Import - action_retry_all_error clears every error line at once"
+    steps:
+      - step: "Create partner one"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner_one"
+        values:
+          name: "Retry All Error Test Partner One"
+          is_company: true
+
+      - step: "Create partner one bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank_one"
+        values:
+          acc_number: "9990000010"
+          partner_id: "REC: partner_one.id"
+
+      - step: "Create partner two"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner_two"
+        values:
+          name: "Retry All Error Test Partner Two"
+          is_company: true
+
+      - step: "Create partner two bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank_two"
+        values:
+          acc_number: "9990000011"
+          partner_id: "REC: partner_two.id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Retry All"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Retry All Error Test Type"
+          code: "ERLT007"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create first error data line, account not yet registered"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line_one"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          state: "error"
+          error_message: "Bank account was not yet registered"
+          data:
+            '{"date": "2026-04-05", "account_number": "9990000010", "amount": "1500"}'
+
+      - step: "Create second error data line, account not yet registered"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line_two"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 2
+          state: "error"
+          error_message: "Bank account was not yet registered"
+          data:
+            '{"date": "2026-04-06", "account_number": "9990000011", "amount": "2500"}'
+
+      - step: "Assert import starts with both lines counted as error"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          num_of_error:
+            type: "value"
+            expected: 2
+          num_of_done:
+            type: "value"
+            expected: 0
+
+      - step: "Retry every error line at once"
+        action: "call"
+        target: "import_doc"
+        method: "action_retry_all_error"
+
+      - step: "Assert every error line was resolved by the single retry-all call"
+        action: "assert"
+        target: "import_doc"
+        refresh: true
+        asserts:
+          num_of_error:
+            type: "value"
+            expected: 0
+          num_of_done:
+            type: "value"
+            expected: 2
+
+  - name: "Customer Payment Import Data - Ignoring a done line raises"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Ignore Done"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Ignore Done Test Type"
+          code: "ERLT008"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create a data line already resolved to done"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          state: "done"
+          ignore_reason: "Would-be reason"
+
+      - step: "Attempt to ignore the done line"
+        action: "call"
+        target: "data_line"
+        method: "action_ignore"
+        expect_error:
+          type: "UserError"
+
+  - name: "Customer Payment Import Data - Ignoring without a reason raises"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Ignore Reason"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Ignore Reason Test Type"
+          code: "ERLT009"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create error data line without an ignore reason"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          state: "error"
+          error_message: "Sample error for ignore reason test"
+
+      - step: "Attempt to ignore the line without filling ignore_reason"
+        action: "call"
+        target: "data_line"
+        method: "action_ignore"
+        expect_error:
+          type: "UserError"
+
+  - name: "Customer Payment Import Data - Edit-data wizard rejects a done line"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Edit Done"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Edit Wizard Done Test Type"
+          code: "ERLT010"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create a data line already resolved to done"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          state: "done"
+          data: '{"emp": "OLD"}'
+
+      - step: "Attempt to confirm the edit-data wizard on the done line"
+        action: "wizard"
+        model: "edit_customer_payment_import_data"
+        target: "data_line"
+        values:
+          data: '{"emp": "NEW"}'
+        method: "action_confirm"
+        expect_error:
+          type: "UserError"
+
+  - name:
+      "Customer Payment Import Data - Edit-data wizard rejects invalid JSON without
+      writing"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Edit Invalid"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Edit Wizard Invalid JSON Test Type"
+          code: "ERLT011"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create an error data line with valid raw data"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          state: "error"
+          error_message: "Sample error"
+          data: '{"emp": "OLD"}'
+
+      - step: "Attempt to confirm the edit-data wizard with invalid JSON"
+        action: "wizard"
+        model: "edit_customer_payment_import_data"
+        target: "data_line"
+        values:
+          data: "bukan json"
+        method: "action_confirm"
+        expect_error:
+          type: "UserError"
+
+      - step: "Assert the data line's raw data is unchanged after rejection"
+        action: "assert"
+        target: "data_line"
+        asserts:
+          data:
+            type: "value"
+            expected: '{"emp": "OLD"}'
+
+  - name:
+      "Customer Payment Import - Second import with a duplicate file hash is rejected"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Dup Hash"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Dup Hash Test Type"
+          code: "ERLT012"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create first import document with a CSV file"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "doc1"
+        as_user: "base.user_admin"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+          import_file: "ZGF0ZSxhY2NvdW50X251bWJlcixhbW91bnQKMjAyNi0wMy0wMSwxMTEsMTAwMAo="
+          import_file_name: "dup.csv"
+
+      - step: "Load data for the first import"
+        action: "call"
+        target: "doc1"
+        method: "action_load_data"
+        as_user: "base.user_admin"
+
+      - step: "Create second import document with the same CSV file"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "doc2"
+        as_user: "base.user_admin"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+          import_file: "ZGF0ZSxhY2NvdW50X251bWJlcixhbW91bnQKMjAyNi0wMy0wMSwxMTEsMTAwMAo="
+          import_file_name: "dup_2.csv"
+
+      - step: "Loading data for the second import is rejected as a duplicate"
+        action: "call"
+        target: "doc2"
+        method: "action_load_data"
+        as_user: "base.user_admin"
+        expect_error:
+          type: "ValidationError"
+
+  - name:
+      "Customer Payment Import Data - _run_process_payment raises on unknown bank
+      account"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Unknown Account"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Unknown Account Test Type"
+          code: "ERLT013"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create data line with an unregistered bank account number"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-03-02", "account_number": "0000000000", "amount": "1000"}'
+
+      - step: "The raw processing method raises UserError directly"
+        action: "call"
+        target: "data_line"
+        method: "_run_process_payment"
+        expect_error:
+          type: "UserError"
+
+  - name: "Customer Payment Import Data - Processing twice never duplicates the payment"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Idempotent Test Partner"
+          is_company: true
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "7777777777"
+          partner_id: "REC: partner.id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Idempotent"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Idempotent Test Type"
+          code: "ERLT014"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create data line"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-03-03", "account_number": "7777777777", "amount": "50000"}'
+
+      - step: "Process the data line the first time"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+
+      - step: "Assert the line resolved to done with a payment linked"
+        action: "assert"
+        target: "data_line"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          payment_id:
+            type: "value"
+            operator: "is_truthy"
+
+      - step: "Get the payment created on the first processing"
+        action: "search"
+        model: "account.payment"
+        domain:
+          - ["partner_id", "=", "REC: partner.id"]
+          - ["journal_id", "=", "REC: journal.id"]
+        save_as: "payment"
+        expect_count: 1
+
+      - step: "Process the data line a second time"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+
+      - step: "Assert the payment link is unchanged after the second processing"
+        action: "assert"
+        target: "data_line"
+        refresh: true
+        asserts:
+          payment_id:
+            type: "m2o"
+            expected: "REC: payment.id"
+
+      - step: "Assert no second payment was created"
+        action: "search"
+        model: "account.payment"
+        domain:
+          - ["partner_id", "=", "REC: partner.id"]
+          - ["journal_id", "=", "REC: journal.id"]
+        save_as: "payments_after"
+        expect_count: 1

@@ -93,29 +93,88 @@
             </xpath>
             <xpath expr="//page[1]" position="before">
                 <page name="import_data" string="Import Data">
-                    <button
-                            name="action_load_data"
-                            string="Load Data"
-                            type="object"
-                            class="oe_highlight"
-                            icon="fa-upload"
-                            attrs="{'invisible':[('state','!=','draft')]}"
-                        />
+                    <div>
+                        <button
+                                name="action_load_data"
+                                string="Load Data"
+                                type="object"
+                                class="oe_highlight"
+                                icon="fa-upload"
+                                attrs="{'invisible':[('state','!=','draft')]}"
+                            />
+                        <button
+                                name="action_retry_all_error"
+                                string="Retry All Errors"
+                                type="object"
+                                class="btn-secondary ml-2"
+                                icon="fa-refresh"
+                                attrs="{'invisible':[('state','!=','queue_done')]}"
+                            />
+                        <button
+                                name="%(ignore_customer_payment_import_error_action)d"
+                                string="Ignore All Errors"
+                                type="action"
+                                class="btn-secondary ml-2"
+                                icon="fa-ban"
+                                attrs="{'invisible':[('state','!=','queue_done')]}"
+                            />
+                    </div>
+                    <group name="import_data_counter" col="4">
+                        <field name="num_of_data" />
+                        <field name="num_of_done" />
+                        <field name="num_of_error" />
+                        <field name="num_of_ignored" />
+                    </group>
                     <field name="data_ids">
-                        <tree>
+                        <tree create="false" edit="false" delete="false">
                             <field name="sequence" />
                             <field name="data" widget="json_viewer" />
                             <field name="partner_id" />
                             <field name="amount" />
                             <field name="payment_id" />
+                            <field
+                                    name="state"
+                                    widget="badge"
+                                    decoration-danger="state=='error'"
+                                    decoration-success="state=='done'"
+                                    decoration-muted="state=='ignored'"
+                                />
+                            <field name="error_message" />
+                            <field name="ignore_reason" />
+                            <button
+                                    name="action_retry"
+                                    string="Retry"
+                                    type="object"
+                                    icon="fa-refresh"
+                                    attrs="{'invisible': [('state','not in',('draft','error'))]}"
+                                />
+                            <button
+                                    name="action_open_ignore_wizard"
+                                    string="Ignore"
+                                    type="object"
+                                    icon="fa-ban"
+                                    attrs="{'invisible': [('state','not in',('draft','error'))]}"
+                                />
+                            <button
+                                    name="action_open_edit_data_wizard"
+                                    string="Edit Data"
+                                    type="object"
+                                    icon="fa-pencil"
+                                    attrs="{'invisible': [('state','not in',('draft','error'))]}"
+                                />
                         </tree>
                         <form>
                             <group>
                                 <group>
-                                    <field name="sequence" />
-                                    <field name="partner_id" />
-                                    <field name="amount" />
-                                    <field name="payment_id" />
+                                    <field name="sequence" readonly="1" />
+                                    <field name="partner_id" readonly="1" />
+                                    <field name="amount" readonly="1" />
+                                    <field name="payment_id" readonly="1" />
+                                    <field name="state" widget="badge" readonly="1" />
+                                </group>
+                                <group>
+                                    <field name="error_message" readonly="1" />
+                                    <field name="ignore_reason" readonly="1" />
                                 </group>
                             </group>
                             <group string="Data">
@@ -124,6 +183,7 @@
                                         widget="json_viewer"
                                         nolabel="1"
                                         colspan="2"
+                                        readonly="1"
                                     />
                             </group>
                         </form>

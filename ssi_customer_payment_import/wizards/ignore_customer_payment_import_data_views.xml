@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 OpenSynergy Indonesia
+     Copyright 2026 PT. Simetri Sinergi Indonesia
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo>
+<record id="ignore_customer_payment_import_data_view_form" model="ir.ui.view">
+    <field name="name">ignore_customer_payment_import_data - form</field>
+    <field name="model">ignore_customer_payment_import_data</field>
+    <field name="arch" type="xml">
+        <form>
+            <group name="group_1" colspan="4" col="2">
+                <field name="data_id" invisible="1" />
+                <field name="reason" nolabel="1" colspan="2" />
+            </group>
+            <footer>
+                <button
+                        string="Confirm"
+                        name="action_confirm"
+                        type="object"
+                        class="btn-primary"
+                    />
+                <button string="Cancel" class="btn-default" special="cancel" />
+            </footer>
+        </form>
+    </field>
+</record>
+
+<record id="ignore_customer_payment_import_data_action" model="ir.actions.act_window">
+    <field name="name">Ignore Data Line</field>
+    <field name="res_model">ignore_customer_payment_import_data</field>
+    <field name="view_mode">form</field>
+    <field name="view_id" ref="ignore_customer_payment_import_data_view_form" />
+    <field name="target">new</field>
+</record>
+</odoo>

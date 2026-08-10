@@ -183,9 +183,57 @@ class CustomerPaymentImport(models.Model):  # pylint: disable=too-few-public-met
         states={"queue_done": [("readonly", False)]},
         help="Raw rows read from the import file, one record per row.",
     )
+    num_of_data = fields.Integer(
+        string="# Data",
+        compute="_compute_num_of_data",
+        compute_sudo=True,
+        help="Total number of import data lines.",
+    )
+    num_of_done = fields.Integer(
+        string="# Done",
+        compute="_compute_num_of_data",
+        compute_sudo=True,
+        help="Number of import data lines successfully converted into "
+        "customer payments.",
+    )
+    num_of_error = fields.Integer(
+        string="# Error",
+        compute="_compute_num_of_data",
+        compute_sudo=True,
+        help="Number of import data lines that failed to be converted "
+        "into customer payments.",
+    )
+    num_of_ignored = fields.Integer(
+        string="# Ignored",
+        compute="_compute_num_of_data",
+        compute_sudo=True,
+        help="Number of import data lines excluded from the import.",
+    )
+
+    @api.depends("data_ids.state")
+    def _compute_num_of_data(self):
+        """Count import data lines by outcome.
+
+        Sets ``num_of_data``, ``num_of_done``, ``num_of_error`` and
+        ``num_of_ignored`` from ``data_ids.state``.
+        """
+        for record in self:
+            record.num_of_data = len(record.data_ids)
+            record.num_of_done = len(
+                record.data_ids.filtered(lambda d: d.state == "done")
+            )
+            record.num_of_error = len(
+                record.data_ids.filtered(lambda d: d.state == "error")
+            )
+            record.num_of_ignored = len(
+                record.data_ids.filtered(lambda d: d.state == "ignored")
+            )
 
     @api.depends("type_id")
     def _compute_allowed_journal_ids(self):
+        """Compute ``allowed_journal_ids`` from the Type's M2O
+        configurator settings for journals.
+        """
         for record in self:
             result = False
             if record.type_id:
@@ -200,6 +248,9 @@ class CustomerPaymentImport(models.Model):  # pylint: disable=too-few-public-met
 
     @api.depends("type_id")
     def _compute_allowed_account_ids(self):
+        """Compute ``allowed_account_ids`` from the Type's M2O
+        configurator settings for destination accounts.
+        """
         for record in self:
             result = False
             if record.type_id:
@@ -214,6 +265,12 @@ class CustomerPaymentImport(models.Model):  # pylint: disable=too-few-public-met
 
     @api.constrains("import_file_hash")
     def _check_duplicate_import_file_hash(self):
+        """Reject a file already imported by another non-cancelled
+        document.
+
+        Raises ``ValidationError`` when
+        ``_check_duplicate_import_file_hash_condition`` fails.
+        """
         for document in self.sudo():
             if not document._check_duplicate_import_file_hash_condition():
                 error_message = """
@@ -226,6 +283,12 @@ Solution: Check the existing import or use a different file""" % (
                 raise ValidationError(_(error_message))
 
     def _check_duplicate_import_file_hash_condition(self):
+        """Return whether ``import_file_hash`` is free of duplicates.
+
+        :return: ``True`` when no other non-cancelled document shares
+            the same ``import_file_hash``, or when this document has
+            no hash set yet
+        """
         self.ensure_one()
         if not self.import_file_hash:
             return True
@@ -240,10 +303,18 @@ Solution: Check the existing import or use a different file""" % (
         return not duplicate
 
     def action_load_data(self):
+        """Load the import data lines from ``import_file``.
+
+        Delegates to ``_load_data`` under ``sudo``.
+        """
         for record in self.sudo():
             record._load_data()
 
     def _load_data(self):
+        """Delete existing data lines, read ``import_file``, and
+        create one data line per row with the raw row data stored as
+        JSON.
+        """
         self.ensure_one()
 
         if self.data_ids:
@@ -264,6 +335,12 @@ Solution: Check the existing import or use a different file""" % (
             self.env["customer_payment_import.data"].create(data_vals)
 
     def _prepare_import_data(self, sequence, row):
+        """Build the ``create`` vals for a single import data line.
+
+        :param sequence: row sequence number
+        :param row: dict of column name/index to raw cell value
+        :return: dict of vals for ``customer_payment_import.data``
+        """
         self.ensure_one()
         return {
             "import_id": self.id,
@@ -330,21 +407,99 @@ Solution: Check the existing import or use a different file""" % (
 
     @ssi_decorator.post_queue_done_action()
     def _01_create_payment_on_queue_done(self):
+        """Enqueue one job per data line when the import reaches
+        ``queue_done``.
+
+        Each job calls ``_process_payment`` on its data line and
+        stores the resulting job record on ``queue_job_id``.
+        """
         self.ensure_one()
         for data_line in self.data_ids:
             description = "Create customer payment for data line ID %s" % data_line.id
-            data_line.with_context(job_batch=self.done_queue_job_batch_id).with_delay(
-                description=_(description)
-            )._process_payment()
+            job = (
+                data_line.with_context(job_batch=self.done_queue_job_batch_id)
+                .with_delay(description=_(description))
+                ._process_payment()
+            )
+            data_line.queue_job_id = job.db_record().id
 
     @ssi_decorator.post_queue_cancel_action()
     def _01_cancel_payment_on_queue_cancel(self):
+        """Enqueue one job per data line with a linked payment when
+        cancelling.
+
+        Each job calls ``_cancel_payment`` on its data line.
+        """
         self.ensure_one()
         for data_line in self.data_ids.filtered(lambda d: d.payment_id):
             description = "Cancel customer payment for data line ID %s" % data_line.id
             data_line.with_context(job_batch=self.cancel_queue_job_batch_id).with_delay(
                 description=_(description)
             )._cancel_payment()
+
+    def action_retry_all_error(self):
+        """Retry every errored data line of the selected imports.
+
+        Delegates to ``_retry_all_error`` under ``sudo`` so users
+        without direct write access to the data lines can still retry.
+        """
+        for record in self.sudo():
+            record._retry_all_error()
+
+    def _retry_all_error(self):
+        """Call ``action_retry`` on each data line returned by
+        ``_get_error_data``.
+        """
+        self.ensure_one()
+        for data_line in self._get_error_data():
+            data_line.action_retry()
+
+    def _get_error_data(self):
+        """Return the data lines currently in the ``error`` state.
+
+        :return: ``customer_payment_import.data`` recordset
+        """
+        self.ensure_one()
+        return self.data_ids.filtered(lambda d: d.state == "error")
+
+    def _get_unfinished_data(self):
+        """Return the data lines not yet resolved into an outcome.
+
+        :return: ``customer_payment_import.data`` recordset in
+            ``draft`` or ``error`` state
+        """
+        self.ensure_one()
+        return self.data_ids.filtered(lambda d: d.state in ("draft", "error"))
+
+    def _force_pending_queue_job_done(self):
+        """Force every non-``done`` job of this import to ``done``.
+
+        Used when the queue jobs finished but their ``queue.job``
+        record was not updated, so ``action_done`` is not blocked.
+        """
+        self.ensure_one()
+        for job in self.done_queue_job_ids.filtered(lambda j: j.state != "done"):
+            job.button_done()
+
+    def _try_action_done(self):
+        """Move the import to ``done`` once every data line settled.
+
+        No-op unless the import is in ``queue_done`` with no line left
+        in ``draft``/``error``. Forces pending jobs to ``done`` first.
+
+        :return: ``True``
+        """
+        self.ensure_one()
+        if self.state != "queue_done":
+            return True
+        if self._get_unfinished_data():
+            return True
+        self._force_pending_queue_job_done()
+        batch = self.done_queue_job_batch_id
+        if batch:
+            batch.check_state()
+        self.action_done()
+        return True
 
     @ssi_decorator.insert_on_form_view()
     def _insert_form_element(self, view_arch):
