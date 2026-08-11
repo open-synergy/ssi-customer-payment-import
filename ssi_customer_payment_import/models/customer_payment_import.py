@@ -484,12 +484,24 @@ Solution: Check the existing import or use a different file""" % (
     def _try_action_done(self):
         """Move the import to ``done`` once every data line settled.
 
-        No-op unless the import is in ``queue_done`` with no line left
-        in ``draft``/``error``. Forces pending jobs to ``done`` first.
+        Locks this import's row first (``SELECT ... FOR UPDATE``) and
+        re-reads ``state`` before evaluating the guard, so two queue
+        jobs finishing at nearly the same time cannot both pass the
+        guard and call ``action_done()`` twice: the second caller
+        blocks on the lock until the first caller's transaction
+        commits, then sees ``state`` already moved past
+        ``queue_done`` and returns without error. No-op unless the
+        import is in ``queue_done`` with no line left in
+        ``draft``/``error``. Forces pending jobs to ``done`` first.
 
         :return: ``True``
         """
         self.ensure_one()
+        self.env.cr.execute(
+            "SELECT id FROM customer_payment_import WHERE id = %s FOR UPDATE",
+            (self.id,),
+        )
+        self.invalidate_cache(["state"], self.ids)
         if self.state != "queue_done":
             return True
         if self._get_unfinished_data():
