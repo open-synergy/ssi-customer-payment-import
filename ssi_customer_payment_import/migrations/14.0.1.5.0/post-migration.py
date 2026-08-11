@@ -85,9 +85,7 @@ def _backfill_queue_job_id_and_error_state(env):
         if not jobs:
             continue
         draft_lines_by_id = {
-            line.id: line
-            for line in import_document.data_ids
-            if line.state == "draft"
+            line.id: line for line in import_document.data_ids if line.state == "draft"
         }
         if not draft_lines_by_id:
             continue
