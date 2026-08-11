@@ -2182,3 +2182,406 @@ scenarios:
           ignore_reason:
             type: "value"
             operator: "is_falsy"
+
+  - name:
+      "Customer Payment Import - _process_payment resolves the last line and
+      auto-completes the import"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Auto Complete Test Partner"
+          is_company: true
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Auto Complete"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Auto Complete Test Type"
+          code: "ERLT022"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Force import into Queue To Done state"
+        action: "write"
+        target: "import_doc"
+        values:
+          state: "queue_done"
+
+      - step: "Create the first, already-settled data line"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line_done"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          state: "done"
+
+      - step: "Create a payment to pre-fill payment_id on the pending line"
+        action: "create"
+        model: "account.payment"
+        save_as: "existing_payment"
+        values:
+          payment_type: "inbound"
+          partner_type: "customer"
+          partner_id: "REC: partner.id"
+          journal_id: "REC: journal.id"
+          amount: 75000
+          date: "2026-06-01"
+
+      - step:
+          "Create the second data line, still draft but with payment_id already filled
+          -- simulating a line whose payment was created by a previous attempt that
+          never got to write state='done'"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line_pending"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 2
+          payment_id: "REC: existing_payment.id"
+
+      - step: "Process the pending line via the queue entry point"
+        action: "call"
+        target: "line_pending"
+        method: "_process_payment"
+
+      - step: "Assert the line resolved to done without touching payment_id"
+        action: "assert"
+        target: "line_pending"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          payment_id:
+            type: "m2o"
+            expected: "REC: existing_payment.id"
+
+      - step: "Assert the import auto-completed to done with a real document number"
+        action: "assert"
+        target: "import_doc"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          name:
+            type: "value"
+            operator: "not_equals"
+            expected: "/"
+
+  - name:
+      "Customer Payment Import - Excluded line resolved via _process_payment
+      auto-completes the import"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Exclude Auto Complete"
+          type: "bank"
+
+      - step: "Create type with an exclusion rule"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Exclude Auto Complete Test Type"
+          code: "EXCT003"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          communication_column: "description"
+          exclude_column: "description"
+          exclude_values: "Saldo Awal"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Force import into Queue To Done state"
+        action: "write"
+        target: "import_doc"
+        values:
+          state: "queue_done"
+
+      - step: "Create the first, already-settled data line"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line_done"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          state: "done"
+
+      - step:
+          "Create the second data line, matching the Exclude Values configured on the
+          Type"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line_excluded"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 2
+          data:
+            '{"date": "2026-05-06", "account_number": "0000000000", "amount": "0",
+            "description": "Saldo Awal"}'
+
+      - step: "Process the excluded line via the queue entry point"
+        action: "call"
+        target: "line_excluded"
+        method: "_process_payment"
+
+      - step: "Assert the excluded line is ignored, never touching payment_id"
+        action: "assert"
+        target: "line_excluded"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "ignored"
+          ignore_reason:
+            type: "value"
+            operator: "is_truthy"
+          payment_id:
+            type: "value"
+            operator: "is_falsy"
+
+      - step: "Assert the import auto-completed to done"
+        action: "assert"
+        target: "import_doc"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+
+  - name:
+      "Customer Payment Import - An error line keeps the import in queue_done even after
+      the last draft line resolves"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Error Blocks Auto Complete Test Partner"
+          is_company: true
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Error Blocks Auto Complete"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Error Blocks Auto Complete Test Type"
+          code: "ERLT023"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Force import into Queue To Done state"
+        action: "write"
+        target: "import_doc"
+        values:
+          state: "queue_done"
+
+      - step: "Create the first, already-settled data line"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line_done"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          state: "done"
+
+      - step: "Create the second data line, stuck in error"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line_error"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 2
+          state: "error"
+          error_message: "Sample error blocking auto-completion"
+
+      - step: "Create a payment to pre-fill payment_id on the pending line"
+        action: "create"
+        model: "account.payment"
+        save_as: "existing_payment"
+        values:
+          payment_type: "inbound"
+          partner_type: "customer"
+          partner_id: "REC: partner.id"
+          journal_id: "REC: journal.id"
+          amount: 32000
+          date: "2026-06-02"
+
+      - step:
+          "Create the third data line, still draft but with payment_id already filled"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line_pending"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 3
+          payment_id: "REC: existing_payment.id"
+
+      - step: "Process the pending line via the queue entry point"
+        action: "call"
+        target: "line_pending"
+        method: "_process_payment"
+
+      - step: "Assert the pending line resolved to done"
+        action: "assert"
+        target: "line_pending"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+
+      - step:
+          "Assert the import document stays in queue_done because of the remaining error
+          line"
+        action: "assert"
+        target: "import_doc"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "queue_done"
+
+  - name:
+      "Customer Payment Import Data - Re-processing a done line does not touch the
+      import document"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Reprocess Done Line Test Partner"
+          is_company: true
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Reprocess Done Line"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Reprocess Done Line Test Type"
+          code: "ERLT025"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Force import into Queue To Done state"
+        action: "write"
+        target: "import_doc"
+        values:
+          state: "queue_done"
+
+      - step: "Create a payment to pre-fill payment_id on the settled line"
+        action: "create"
+        model: "account.payment"
+        save_as: "existing_payment"
+        values:
+          payment_type: "inbound"
+          partner_type: "customer"
+          partner_id: "REC: partner.id"
+          journal_id: "REC: journal.id"
+          amount: 41000
+          date: "2026-06-03"
+
+      - step: "Create the already-done data line"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          state: "done"
+          payment_id: "REC: existing_payment.id"
+
+      - step: "Process the line a second time via the queue entry point"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+
+      - step: "Assert the line's payment link and state are unchanged"
+        action: "assert"
+        target: "data_line"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          payment_id:
+            type: "m2o"
+            expected: "REC: existing_payment.id"
+
+      - step: "Assert the import document was not touched"
+        action: "assert"
+        target: "import_doc"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "queue_done"

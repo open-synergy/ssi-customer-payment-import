@@ -246,7 +246,14 @@ Solution: Verify the Date Format on the import Type matches the actual data,
         that the line already resolved itself (currently: excluded
         rows, written to ``state='ignored'``), the final
         unconditional ``state='done'`` write below is skipped,
-        otherwise it would overwrite the ``ignored`` state.
+        otherwise it would overwrite the ``ignored`` state. On both
+        success paths, ``import_id._try_action_done()`` is called as
+        the last step so the parent import is re-evaluated for
+        completion right when this line settles -- regardless of
+        whether the job that resolved it belongs to a
+        ``queue.job.batch`` or was requeued outside of one by
+        ``_retry()``. The failure path re-raises instead, so an
+        unresolved line never triggers this re-evaluation.
 
         :return: ``True``
         :raises Exception: re-raises whatever
@@ -263,8 +270,10 @@ Solution: Verify the Date Format on the import Type matches the actual data,
             self._write_error_result(str(error))
             raise
         if already_resolved:
+            self.import_id._try_action_done()
             return True
         self.write({"state": "done", "error_message": False})
+        self.import_id._try_action_done()
         return True
 
     def _write_error_result(self, message):
