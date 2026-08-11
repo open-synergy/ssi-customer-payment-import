@@ -8,6 +8,7 @@ import io
 import openpyxl
 from odoo_yaml_test import YamlTransactionCase
 
+from odoo.exceptions import UserError
 from odoo.tests import tagged
 
 
@@ -305,3 +306,37 @@ class TestCustomerPaymentImport(YamlTransactionCase):
         self.assertEqual(data_line.state, "ignored")
         self.assertEqual(job_record.state, "done")
         self.assertEqual(data_line.queue_job_id, job_record)
+
+    def test_process_payment_unregistered_account_leaves_line_in_error(self):
+        """``_process_payment`` on an unregistered account writes ``error``.
+
+        Pure Python -- YAML's ``expect_error`` runs the call inside a
+        savepoint that gets rolled back once the expected exception is
+        caught, so the ``_write_error_result`` write ``_process_payment``
+        performs in its ``except`` block before re-raising would be lost
+        if asserted via YAML (same limitation already noted on "Edit raw
+        data then retry resolves the line" in the YAML scenarios).
+        Calling it directly here, with no savepoint around it, keeps the
+        write visible for assertion.
+        """
+        ctype = self._create_type(code="PYTT-ERRLINE")
+        journal = self._create_bank_journal("Test Journal PYTT-ERRLINE")
+        import_doc = self.env["customer_payment_import"].create(
+            {"type_id": ctype.id, "journal_id": journal.id}
+        )
+        import_doc.write({"state": "queue_done"})
+        data_line = self.env["customer_payment_import.data"].create(
+            {
+                "import_id": import_doc.id,
+                "sequence": 1,
+                "data": '{"date": "2026-04-08", '
+                '"account_number": "9990000099", "amount": "1000"}',
+            }
+        )
+
+        with self.assertRaises(UserError):
+            data_line._process_payment()
+
+        self.assertEqual(data_line.state, "error")
+        self.assertIn("No partner found", data_line.error_message)
+        self.assertEqual(import_doc.state, "queue_done")
