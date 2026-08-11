@@ -238,3 +238,70 @@ class TestCustomerPaymentImport(YamlTransactionCase):
 
         self.assertEqual(data_line.state, "ignored")
         self.assertEqual(job_record.state, "done")
+
+    def _create_failed_batch_job_data_line(self, code):
+        """Build a data line whose ``failed`` job is only reachable
+        through the import's done batch, not ``queue_job_id``.
+
+        Pure Python -- trigger P1 (L-01: fixture needs
+        ``with_delay()._process_payment()`` chaining, same limitation
+        as ``_create_failed_job_data_line``).
+
+        Mirrors ``_01_create_payment_on_queue_done``: creates the
+        done batch via ``_create_job_batch_done`` and enqueues the
+        job with ``job_batch`` in context, so the job ends up in
+        ``import_id.done_queue_job_ids``. Unlike
+        ``_create_failed_job_data_line``, ``queue_job_id`` on the
+        line is deliberately left empty, simulating a row created
+        before that field was tracked, or a failed write-back.
+
+        :param code: unique ``code`` value for the fixture type
+        :return: tuple of (data line, its ``queue.job`` record,
+            the parent import document)
+        """
+        ctype = self._create_type(code=code)
+        journal = self._create_bank_journal("Test Journal %s" % code)
+        import_doc = self.env["customer_payment_import"].create(
+            {"type_id": ctype.id, "journal_id": journal.id}
+        )
+        import_doc._create_job_batch_done()
+        data_line = self.env["customer_payment_import.data"].create(
+            {"import_id": import_doc.id, "sequence": 1}
+        )
+        job = (
+            data_line.with_context(job_batch=import_doc.done_queue_job_batch_id)
+            .with_delay(description="Test batch job %s" % code)
+            ._process_payment()
+        )
+        job_record = job.db_record()
+        job_record.write({"state": "failed"})
+        data_line.write(
+            {
+                "state": "error",
+                "error_message": "Sample error before ignore, batch lookup",
+            }
+        )
+        return data_line, job_record, import_doc
+
+    def test_ignore_finds_job_via_batch_when_queue_job_id_empty(self):
+        """``action_ignore`` falls back to the done batch's jobs.
+
+        Pure Python -- trigger P1 (L-01: fixture needs
+        ``with_delay()._process_payment()`` chaining, see
+        ``_create_failed_batch_job_data_line``).
+
+        When ``queue_job_id`` is empty, ``_force_queue_job_done``
+        looks up the matching job in ``import_id.done_queue_job_ids``
+        by ``model_name`` and membership in ``records``, writes it
+        back to ``queue_job_id``, and forces it to ``done``.
+        """
+        data_line, job_record, __ = self._create_failed_batch_job_data_line(
+            "PYTT-IGNOREFB"
+        )
+        data_line.ignore_reason = "Duplicate row, safe to ignore"
+
+        data_line.action_ignore()
+
+        self.assertEqual(data_line.state, "ignored")
+        self.assertEqual(job_record.state, "done")
+        self.assertEqual(data_line.queue_job_id, job_record)
