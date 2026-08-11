@@ -592,15 +592,31 @@ Solution: Only lines in Draft or Error state can be retried"""
     def _force_queue_job_done(self):
         """Force this line's queue job to ``done`` if not already.
 
-        Lines created before ``queue_job_id`` was tracked have no job
-        link here; those are swept up separately by the import's
-        ``_force_pending_queue_job_done``.
+        When ``queue_job_id`` is empty -- rows created before that
+        field was tracked, or rows where writing it back once failed
+        -- the matching job is looked up in the parent import's
+        ``done_queue_job_ids`` by comparing ``model_name`` to this
+        model and checking whether this record's id is in the job's
+        ``records`` recordset. ``records`` is a ``JobSerialized``
+        field, so it cannot be used inside a ``search()`` domain; the
+        comparison is done in Python over the batch's job recordset
+        instead. A job found this way is written back to
+        ``queue_job_id`` before being forced to ``done``, so this
+        lookup only has to happen once per line. When no matching job
+        exists -- e.g. the import never reached ``queue_done`` for
+        this line -- nothing is done and no error is raised, since
+        that is not an error condition.
 
         :return: ``True``
         """
         self.ensure_one()
+        if not self.queue_job_id:
+            job = self.import_id.done_queue_job_ids.filtered(
+                lambda job: job.model_name == self._name and self.id in job.records.ids
+            )
+            if job:
+                self.queue_job_id = job[0].id
         if self.queue_job_id:
             if self.queue_job_id.state != "done":
                 self.queue_job_id.button_done()
-            return True
         return True

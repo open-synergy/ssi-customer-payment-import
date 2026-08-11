@@ -1551,6 +1551,62 @@ scenarios:
         expect_error:
           type: "UserError"
 
+  - name: "Customer Payment Import Data - Ignoring a line with no queue job at all"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Ignore No Job"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Ignore No Job Test Type"
+          code: "ERLT021"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create error data line with neither queue_job_id nor any job"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          state: "error"
+          error_message: "Sample error, never queued"
+          ignore_reason: "Duplicate row, safe to ignore"
+
+      - step: "Ignore the line -- no matching job, so no error is raised"
+        action: "call"
+        target: "data_line"
+        method: "action_ignore"
+
+      - step: "Assert the line is ignored and queue_job_id stays empty"
+        action: "assert"
+        target: "data_line"
+        asserts:
+          state:
+            type: "value"
+            expected: "ignored"
+          queue_job_id:
+            type: "m2o"
+            expected: false
+
   - name: "Customer Payment Import Data - Edit-data wizard rejects a done line"
     steps:
       - step: "Create bank journal"
