@@ -77,7 +77,11 @@
             <xpath expr="//field[@name='user_id']" position="after">
                 <field name="type_id" />
                 <field name="journal_id" />
-                <field name="account_id" />
+                <field
+                        name="account_id"
+                        attrs="{'invisible':[('usage_column','!=',False)]}"
+                    />
+                <field name="usage_column" invisible="1" />
                 <field name="allowed_journal_ids" invisible="1" />
                 <field name="allowed_account_ids" invisible="1" />
             </xpath>

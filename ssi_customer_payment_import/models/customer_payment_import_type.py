@@ -2,7 +2,8 @@
 # Copyright 2026 PT. Simetri Sinergi Indonesia
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-from odoo import fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class CustomerPaymentImportType(models.Model):
@@ -136,6 +137,17 @@ class CustomerPaymentImportType(models.Model):
             "Used to prevent duplicate payments from being created."
         ),
     )
+    usage_column = fields.Char(
+        string="Usage Column",
+        help=(
+            "Column name (or 0-based index if No Header Line is checked) "
+            "containing the usage of each row. When filled in, the "
+            "destination account of every resulting customer payment is "
+            "resolved per row through the Usage Account Mapping below. "
+            "Leave empty to keep using the Account of the import "
+            "document for every row."
+        ),
+    )
     exclude_column = fields.Char(
         string="Exclude Column",
         help=(
@@ -255,6 +267,85 @@ class CustomerPaymentImportType(models.Model):
             "account.account. Used when Account Selection Method = Python Code."
         ),
     )
+
+    # --- Usage account mapping ---
+
+    account_mapping_ids = fields.One2many(
+        string="Usage Account Mappings",
+        comodel_name="customer_payment_import_type.account_mapping",
+        inverse_name="type_id",
+        help=(
+            "Per-usage destination accounts. Each line binds one value "
+            "of the Usage Column to the account the resulting customer "
+            "payment must land on."
+        ),
+    )
+
+    def _get_account_by_usage(self, usage_value):
+        """Return the account mapped to ``usage_value`` on this Type.
+
+        Both the incoming value and each configured ``usage_value`` are
+        normalized through
+        ``customer_payment_import_type.account_mapping``
+        ``._normalize_usage_value`` before being compared, so letter
+        case and surrounding spaces never decide the outcome. An
+        unmapped usage is not an error condition -- the caller is
+        expected to fall back to another account.
+
+        :param usage_value: raw usage value read from the import file
+        :return: the mapped ``account.account`` record, or an empty
+            ``account.account`` recordset when nothing matches
+        """
+        self.ensure_one()
+        obj_mapping = self.env["customer_payment_import_type.account_mapping"]
+        normalized = obj_mapping._normalize_usage_value(usage_value)
+        if not normalized:
+            return self.env["account.account"]
+        for mapping in self.account_mapping_ids:
+            if obj_mapping._normalize_usage_value(mapping.usage_value) == normalized:
+                return mapping.account_id
+        return self.env["account.account"]
+
+    @api.constrains("usage_column", "account_mapping_ids")
+    def _check_usage_column_mapping(self):
+        """Reject a Usage Column configured without any mapping line.
+
+        A Usage Column with no Usage Account Mapping switches on the
+        per-row account resolution while leaving it nothing to resolve
+        with, so every row would silently fall back to the import
+        document's account -- the exact behaviour the Usage Column was
+        filled in to replace.
+
+        Raises ``ValidationError`` when
+        ``_check_usage_column_mapping_condition`` fails.
+        """
+        for record in self:
+            if not record._check_usage_column_mapping_condition():
+                error_message = (
+                    _(
+                        """
+Context: Saving customer payment import type
+Type: %s
+Problem: Usage Column is filled in but no Usage Account Mapping exists
+Solution: Add at least one Usage Account Mapping line, or clear the
+          Usage Column"""
+                    )
+                    % (record.display_name,)
+                )
+                raise ValidationError(error_message)
+
+    def _check_usage_column_mapping_condition(self):
+        """Return whether the usage configuration of this Type is
+        complete.
+
+        :return: ``True`` when ``usage_column`` is empty, or when it is
+            filled in and at least one ``account_mapping_ids`` line
+            exists
+        """
+        self.ensure_one()
+        if not self.usage_column:
+            return True
+        return bool(self.account_mapping_ids)
 
     def _get_column_delimiter_character(self):
         """Translate the ``delimiter`` selection into its CSV character.
