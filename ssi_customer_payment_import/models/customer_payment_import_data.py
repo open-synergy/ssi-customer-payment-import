@@ -407,8 +407,44 @@ Solution: Register the bank account on the partner (res.partner.bank),
             payment.action_post()
         self.payment_id = payment.id
 
+    def _get_destination_account(self, row, partner):
+        """Resolve the destination account of this line's payment.
+
+        Walks an ordered fallback chain and returns the first
+        non-empty result; an unmapped usage is never an error:
+
+        1. the account mapped to the row's usage on the import Type,
+           when the Type has a ``usage_column`` configured and the
+           row's value matches one of its mapping lines;
+        2. the ``account_id`` of the import document header;
+        3. the paying partner's default receivable account.
+
+        Extension point: override to add another source, or to reorder
+        the chain, without touching ``_prepare_payment_data``.
+
+        :param row: dict of column name/index to cell value, as
+            returned by ``_get_row_data``
+        :param partner: ``res.partner`` record being paid
+        :return: an ``account.account`` recordset, empty when every
+            step of the chain came back empty
+        """
+        self.ensure_one()
+        ctype = self._get_type()
+        if ctype.usage_column:
+            account = ctype._get_account_by_usage(row.get(ctype.usage_column))
+            if account:
+                return account
+        if self.import_id.account_id:
+            return self.import_id.account_id
+        return partner.property_account_receivable_id
+
     def _prepare_payment_data(self, partner, amount, payment_date, communication):
         """Build the ``create`` vals for the resulting ``account.payment``.
+
+        The destination account comes from ``_get_destination_account``
+        and is only written when that resolution returned something, so
+        that a document without any account configured keeps letting
+        ``account.payment`` compute its own default.
 
         :param partner: ``res.partner`` record to pay
         :param amount: payment amount
@@ -428,8 +464,9 @@ Solution: Register the bank account on the partner (res.partner.bank),
             "date": payment_date,
             "ref": communication,
         }
-        if imp.account_id:
-            vals["destination_account_id"] = imp.account_id.id
+        account = self._get_destination_account(self._get_row_data(), partner)
+        if account:
+            vals["destination_account_id"] = account.id
         return vals
 
     def _cancel_payment(self):

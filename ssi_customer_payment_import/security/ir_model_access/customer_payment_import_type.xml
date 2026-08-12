@@ -21,4 +21,29 @@
     <field name="perm_create" eval="1" />
     <field name="perm_unlink" eval="1" />
 </record>
+
+<record
+        id="customer_payment_import_type_account_mapping_all_access"
+        model="ir.model.access"
+    >
+    <field name="name">customer_payment_import_type.account_mapping - all</field>
+    <field name="model_id" ref="model_customer_payment_import_type_account_mapping" />
+    <field name="perm_read" eval="1" />
+    <field name="perm_write" eval="0" />
+    <field name="perm_create" eval="0" />
+    <field name="perm_unlink" eval="0" />
+</record>
+
+<record
+        id="customer_payment_import_type_account_mapping_user_access"
+        model="ir.model.access"
+    >
+    <field name="name">customer_payment_import_type.account_mapping - user</field>
+    <field name="model_id" ref="model_customer_payment_import_type_account_mapping" />
+    <field name="group_id" ref="customer_payment_import_type_group" />
+    <field name="perm_read" eval="1" />
+    <field name="perm_write" eval="1" />
+    <field name="perm_create" eval="1" />
+    <field name="perm_unlink" eval="1" />
+</record>
 </odoo>
