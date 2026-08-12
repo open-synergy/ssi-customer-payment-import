@@ -104,6 +104,30 @@ msgid ""
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: code:addons/ssi_customer_payment_import/models/customer_payment_import_type.py:0
+#, python-format
+msgid ""
+"\n"
+"Context: Saving customer payment import type\n"
+"Type: %s\n"
+"Problem: Usage Column is filled in but no Usage Account Mapping exists\n"
+"Solution: Add at least one Usage Account Mapping line, or clear the\n"
+"          Usage Column"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: code:addons/ssi_customer_payment_import/models/customer_payment_import_type_account_mapping.py:0
+#, python-format
+msgid ""
+"\n"
+"Context: Saving customer payment import type account mapping\n"
+"Type: %s\n"
+"Problem: Usage value '%s' is already mapped on this type\n"
+"Solution: Remove the duplicate mapping line, or change its usage value\n"
+"          (matching ignores letter case and surrounding spaces)"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__num_of_data
 msgid "# Data"
 msgstr ""
@@ -135,7 +159,13 @@ msgid "# Import"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__type_id
+msgid "# Type"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__account_id
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__account_id
 msgid "Account"
 msgstr ""
 
@@ -166,6 +196,7 @@ msgstr ""
 
 #. module: ssi_customer_payment_import
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import__allowed_account_ids
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__allowed_account_ids
 msgid "Accounts allowed to be selected, as configured on the Type."
 msgstr ""
 
@@ -238,6 +269,7 @@ msgstr ""
 
 #. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__allowed_account_ids
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__allowed_account_ids
 msgid "Allowed Accounts"
 msgstr ""
 
@@ -452,6 +484,16 @@ msgid ""
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__usage_column
+msgid ""
+"Column name (or 0-based index if No Header Line is checked) containing the "
+"usage of each row. When filled in, the destination account of every "
+"resulting customer payment is resolved per row through the Usage Account "
+"Mapping below. Leave empty to keep using the Account of the import document "
+"for every row."
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__exclude_column
 msgid ""
 "Column name (or 0-based index if No Header Line is checked) used to "
@@ -517,6 +559,7 @@ msgstr ""
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__create_uid
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__create_uid
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__create_uid
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__create_uid
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_edit_customer_payment_import_data__create_uid
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_data__create_uid
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_error__create_uid
@@ -527,6 +570,7 @@ msgstr ""
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__create_date
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__create_date
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__create_date
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__create_date
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_edit_customer_payment_import_data__create_date
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_data__create_date
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_error__create_date
@@ -574,6 +618,11 @@ msgstr ""
 #: model:ir.model,name:ssi_customer_payment_import.model_customer_payment_import_type
 #: model:res.groups,name:ssi_customer_payment_import.customer_payment_import_type_group
 msgid "Customer Payment Import Type"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model,name:ssi_customer_payment_import.model_customer_payment_import_type_account_mapping
+msgid "Customer Payment Import Type - Account Mapping"
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -633,6 +682,13 @@ msgid "Delimiter"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__account_id
+msgid ""
+"Destination account used for every import file row whose usage value matches"
+" this line."
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import__account_id
 msgid ""
 "Destination account used to create the customer payments from this import. "
@@ -643,10 +699,16 @@ msgstr ""
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__display_name
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__display_name
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__display_name
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__display_name
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_edit_customer_payment_import_data__display_name
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_data__display_name
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_error__display_name
 msgid "Display Name"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__sequence
+msgid "Display order of this mapping line within its import type."
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -785,6 +847,7 @@ msgstr ""
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__id
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__id
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__id
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__id
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_edit_customer_payment_import_data__id
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_data__id
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_error__id
@@ -920,6 +983,7 @@ msgstr ""
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import____last_update
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data____last_update
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type____last_update
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping____last_update
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_edit_customer_payment_import_data____last_update
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_data____last_update
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_error____last_update
@@ -930,6 +994,7 @@ msgstr ""
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__write_uid
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__write_uid
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__write_uid
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__write_uid
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_edit_customer_payment_import_data__write_uid
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_data__write_uid
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_error__write_uid
@@ -940,6 +1005,7 @@ msgstr ""
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__write_date
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__write_date
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__write_date
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__write_date
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_edit_customer_payment_import_data__write_date
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_data__write_date
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_ignore_customer_payment_import_error__write_date
@@ -1169,6 +1235,13 @@ msgid "Payment Option"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__account_mapping_ids
+msgid ""
+"Per-usage destination accounts. Each line binds one value of the Usage "
+"Column to the account the resulting customer payment must land on."
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__policy_template_id
 msgid "Policy Template"
 msgstr ""
@@ -1338,6 +1411,7 @@ msgstr ""
 
 #. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_data__sequence
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__sequence
 msgid "Sequence"
 msgstr ""
 
@@ -1409,6 +1483,11 @@ msgstr ""
 #. module: ssi_customer_payment_import
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_ignore_customer_payment_import_error__import_id
 msgid "The import document whose error data lines will be ignored."
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__type_id
+msgid "The import type this usage-to-account mapping belongs to."
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -1519,6 +1598,34 @@ msgid "Unread Messages Counter"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.customer_payment_import_type_view_form
+msgid "Usage Account Mapping"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__account_mapping_ids
+msgid "Usage Account Mappings"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__usage_column
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__usage_column
+msgid "Usage Column"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import__usage_column
+msgid ""
+"Usage Column configured on the Type. Only used by the form view, to hide the"
+" document Account when the destination account is resolved per row instead."
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__usage_value
+msgid "Usage Value"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:res.groups,name:ssi_customer_payment_import.customer_payment_import_user_group
 msgid "User"
 msgstr ""
@@ -1549,6 +1656,13 @@ msgstr ""
 #. module: ssi_customer_payment_import
 #: model:res.groups,name:ssi_customer_payment_import.customer_payment_import_validator_group
 msgid "Validator"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__usage_value
+msgid ""
+"Value expected in the Usage Column of the import file. Matching is case-"
+"insensitive and ignores leading and trailing spaces on both sides."
 msgstr ""
 
 #. module: ssi_customer_payment_import
