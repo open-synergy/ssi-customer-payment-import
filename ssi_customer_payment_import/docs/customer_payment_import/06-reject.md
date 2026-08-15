@@ -1,10 +1,10 @@
 # Reject Customer Payment Import
 
-> **Module:** ssi_customer_payment_import
-> **Model:** `customer_payment_import`
-> **Menu:** Financial Accounting > Account Receivable > Customer Payment Imports
-> **Actor:** user in group *Customer Payment Import — Validator*
-> **State:** `confirm` → `reject`
+> **Module:** ssi_customer_payment_import\
+> **Model:** `customer_payment_import`\
+> **Menu:** Financial Accounting > Account Receivable > Customer Payment Imports\
+> **Actor:** user in group `Customer Payment Import — Validator`\
+> **State:** `confirm` → `reject`\
 > **Requires:** `04-confirm`
 
 ## Pre-Condition

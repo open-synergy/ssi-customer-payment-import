@@ -1,10 +1,10 @@
 # Cancel Customer Payment Import
 
-> **Module:** ssi_customer_payment_import
-> **Model:** `customer_payment_import`
-> **Menu:** Financial Accounting > Account Receivable > Customer Payment Imports
-> **Actor:** user in group *Customer Payment Import — Validator*
-> **State:** `draft` | `confirm` | `done` → `queue_cancel`
+> **Module:** ssi_customer_payment_import\
+> **Model:** `customer_payment_import`\
+> **Menu:** Financial Accounting > Account Receivable > Customer Payment Imports\
+> **Actor:** user in group `Customer Payment Import — Validator`\
+> **State:** `draft` | `confirm` | `done` → `queue_cancel`\
 > **Requires:** `01-create`
 
 ## Pre-Condition
@@ -12,7 +12,7 @@
 - **Record:** Status is **Draft**, **Waiting for Approval**, or **Done**.
 - **Config:** An active `policy.template` grants `cancel_ok` for that state to the
   actor's group.
-- **Access:** User is in group *Customer Payment Import — Validator*.
+- **Access:** User is in group _Customer Payment Import — Validator_.
 
 ## Flow
 

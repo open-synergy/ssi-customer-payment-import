@@ -1,10 +1,10 @@
 # Auto-Cancel Customer Payment Import
 
-> **Module:** ssi_customer_payment_import
-> **Model:** `customer_payment_import`
-> **Menu:** Financial Accounting > Account Receivable > Customer Payment Imports
-> **Actor:** System (triggered automatically, no user action)
-> **State:** `queue_cancel` → `cancel`
+> **Module:** ssi_customer_payment_import\
+> **Model:** `customer_payment_import`\
+> **Menu:** Financial Accounting > Account Receivable > Customer Payment Imports\
+> **Actor:** System (triggered automatically, no user action)\
+> **State:** `queue_cancel` → `cancel`\
 > **Requires:** `10-cancel`
 
 ## Pre-Condition

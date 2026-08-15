@@ -25,6 +25,7 @@ class TestUiCustomerPaymentImport(HttpSavepointCase):
         cls.cpi_type = cls.env["customer_payment_import_type"].create(
             {
                 "name": "TOUR Bank CSV Type",
+                "code": "TOURBCT01",
                 "file_type": "csv",
                 "date_column": "Date",
                 "partner_bank_account_column": "Bank Account",

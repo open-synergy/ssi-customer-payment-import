@@ -1,9 +1,9 @@
 # Restart Approval Process — Customer Payment Import
 
-> **Module:** ssi_customer_payment_import
-> **Model:** `customer_payment_import`
-> **Menu:** Financial Accounting > Account Receivable > Customer Payment Imports
-> **Actor:** user in group *Customer Payment Import — Validator*
+> **Module:** ssi_customer_payment_import\
+> **Model:** `customer_payment_import`\
+> **Menu:** Financial Accounting > Account Receivable > Customer Payment Imports\
+> **Actor:** user in group `Customer Payment Import — Validator`\
 > **Requires:** `04-confirm`
 
 ## Pre-Condition
@@ -14,7 +14,7 @@
   confirmed).
 - **Config:** An active `policy.template` grants `restart_approval_ok` for state
   `confirm` to the actor's group.
-- **Access:** User is in group *Customer Payment Import — Validator*.
+- **Access:** User is in group _Customer Payment Import — Validator_.
 
 ## Flow
 

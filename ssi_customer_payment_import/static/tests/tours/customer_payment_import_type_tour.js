@@ -40,7 +40,9 @@ odoo.define("ssi_customer_payment_import.customer_payment_import_type_tour", fun
                 trigger:
                     ".o_control_panel .breadcrumb-item.active:contains(Customer Payment Import Types)",
                 extra_trigger: ".o_list_view",
-                run: function () {},
+                run: function () {
+                    // Assertion only.
+                },
             },
             // ── Flow 2 — Click the New button.
             {
@@ -51,15 +53,23 @@ odoo.define("ssi_customer_payment_import.customer_payment_import_type_tour", fun
             {
                 content: "Form is open in edit mode",
                 trigger: ".o_form_view.o_form_editable",
-                run: function () {},
+                run: function () {
+                    // Assertion only.
+                },
             },
-            // ── Flow 3 — Fill in the required fields (Name, File Type,
-            // Date Column, Partner Bank Account Column, Amount Column).
+            // ── Flow 3 — Fill in the required fields (Name, Code,
+            // File Type, Date Column, Partner Bank Account Column,
+            // Amount Column).
             {
                 content: "Fill in Name",
                 trigger: ".o_field_widget[name='name']",
                 extra_trigger: ".o_form_view.o_form_editable",
                 run: "text TOUR Bank CSV",
+            },
+            {
+                content: "Fill in Code",
+                trigger: ".o_field_widget[name='code']",
+                run: "text /",
             },
             {
                 content: "Open the Column Mapping tab",
@@ -90,13 +100,17 @@ odoo.define("ssi_customer_payment_import.customer_payment_import_type_tour", fun
             {
                 content: "Record is saved",
                 trigger: ".o_form_view.o_form_readonly",
-                run: function () {},
+                run: function () {
+                    // Assertion only.
+                },
             },
             {
                 content: "Name shows the value that was filled in",
                 trigger:
                     ".o_form_readonly .o_field_widget[name='name']:contains(TOUR Bank CSV)",
-                run: function () {},
+                run: function () {
+                    // Assertion only.
+                },
             },
         ]
     );

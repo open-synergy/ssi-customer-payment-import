@@ -1,16 +1,16 @@
 # Delete Customer Payment Import
 
-> **Module:** ssi_customer_payment_import
-> **Model:** `customer_payment_import`
-> **Menu:** Financial Accounting > Account Receivable > Customer Payment Imports
-> **Actor:** user in group *Customer Payment Import — User*
+> **Module:** ssi_customer_payment_import\
+> **Model:** `customer_payment_import`\
+> **Menu:** Financial Accounting > Account Receivable > Customer Payment Imports\
+> **Actor:** user in group `Customer Payment Import — User`\
 > **Requires:** `01-create`
 
 ## Pre-Condition
 
 - **Record:** Status is **Draft**.
 - **Record:** Document number is still **/** (not yet generated).
-- **Access:** User is in group *Customer Payment Import — User*.
+- **Access:** User is in group _Customer Payment Import — User_.
 
 ## Flow
 

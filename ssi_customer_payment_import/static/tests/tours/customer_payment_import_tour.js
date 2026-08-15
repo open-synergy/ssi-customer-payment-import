@@ -32,7 +32,9 @@ odoo.define("ssi_customer_payment_import.customer_payment_import_tour", function
                 trigger:
                     ".o_control_panel .breadcrumb-item.active:contains(Customer Payment Imports)",
                 extra_trigger: ".o_list_view",
-                run: function () {},
+                run: function () {
+                    // Assertion only.
+                },
             },
         ];
     }
@@ -58,7 +60,9 @@ odoo.define("ssi_customer_payment_import.customer_payment_import_tour", function
                 {
                     content: "Form is open in edit mode",
                     trigger: ".o_form_view.o_form_editable",
-                    run: function () {},
+                    run: function () {
+                        // Assertion only.
+                    },
                 },
                 // ── Flow 3 — Fill in Type and Journal.
                 {
@@ -107,13 +111,18 @@ odoo.define("ssi_customer_payment_import.customer_payment_import_tour", function
                 {
                     content: "Import File widget is displayed",
                     trigger: ".o_field_widget[name='import_file']",
-                    run: function () {},
+                    run: function () {
+                        // Assertion only.
+                    },
                 },
                 {
                     content: "Load Data button is visible and enabled",
-                    trigger:
-                        ".o_form_view button[name='action_load_data']:enabled",
-                    run: function () {},
+                    trigger: ".o_form_view button[name='action_load_data']:enabled",
+                    run: function () {
+                        // Assertion only -- this button mutates the
+                        // record (type="object"); it must not be
+                        // auto-clicked. See patterns.md §Q.
+                    },
                 },
                 // ── Flow 10 — Click Save.
                 {
@@ -124,13 +133,18 @@ odoo.define("ssi_customer_payment_import.customer_payment_import_tour", function
                 {
                     content: "Record is saved",
                     trigger: ".o_form_view.o_form_readonly",
-                    run: function () {},
+                    run: function () {
+                        // Assertion only.
+                    },
                 },
                 {
                     content: "Status is Draft",
                     trigger:
                         ".o_statusbar_status .o_arrow_button[data-value='draft'].btn-primary",
-                    run: function () {},
+                    run: function () {
+                        // Assertion only -- do not click the current
+                        // state pill.
+                    },
                 },
             ]
         )
@@ -157,7 +171,9 @@ odoo.define("ssi_customer_payment_import.customer_payment_import_tour", function
                 {
                     content: "Form is displayed",
                     trigger: ".o_form_view",
-                    run: function () {},
+                    run: function () {
+                        // Assertion only.
+                    },
                 },
                 // ── Flow 3 — Click the Confirm button.
                 {
@@ -177,7 +193,10 @@ odoo.define("ssi_customer_payment_import.customer_payment_import_tour", function
                     content: "Status is Waiting for Approval",
                     trigger:
                         ".o_statusbar_status .o_arrow_button[data-value='confirm'].btn-primary",
-                    run: function () {},
+                    run: function () {
+                        // Assertion only -- do not click the current
+                        // state pill.
+                    },
                 },
             ]
         )
@@ -204,7 +223,9 @@ odoo.define("ssi_customer_payment_import.customer_payment_import_tour", function
                 {
                     content: "Form is displayed",
                     trigger: ".o_form_view",
-                    run: function () {},
+                    run: function () {
+                        // Assertion only.
+                    },
                 },
                 // ── Flow 3 — Click the Approve button.
                 {
@@ -227,7 +248,9 @@ odoo.define("ssi_customer_payment_import.customer_payment_import_tour", function
                     content: "Status is no longer Waiting for Approval",
                     trigger:
                         ".o_statusbar_status:not(:has(.o_arrow_button[data-value='confirm'].btn-primary))",
-                    run: function () {},
+                    run: function () {
+                        // Assertion only.
+                    },
                 },
             ]
         )
@@ -247,14 +270,15 @@ odoo.define("ssi_customer_payment_import.customer_payment_import_tour", function
                 // ── Flow 2 — Open the record to cancel.
                 {
                     content: "Open the record",
-                    trigger:
-                        ".o_data_row:contains(TOUR-CPI-CANCEL) .o_data_cell:first",
+                    trigger: ".o_data_row:contains(TOUR-CPI-CANCEL) .o_data_cell:first",
                     extra_trigger: ".o_list_view",
                 },
                 {
                     content: "Form is displayed",
                     trigger: ".o_form_view",
-                    run: function () {},
+                    run: function () {
+                        // Assertion only.
+                    },
                 },
                 // ── Flow 3 — Click the Cancel button.
                 {
@@ -268,7 +292,9 @@ odoo.define("ssi_customer_payment_import.customer_payment_import_tour", function
                 {
                     content: "Wizard is open",
                     trigger: ".o_form_view",
-                    run: function () {},
+                    run: function () {
+                        // Assertion only.
+                    },
                 },
                 {
                     content: "Select the cancellation reason",
@@ -292,7 +318,9 @@ odoo.define("ssi_customer_payment_import.customer_payment_import_tour", function
                     content: "Status is no longer Draft",
                     trigger:
                         ".o_statusbar_status:not(:has(.o_arrow_button[data-value='draft'].btn-primary))",
-                    run: function () {},
+                    run: function () {
+                        // Assertion only.
+                    },
                 },
             ]
         )

@@ -1,10 +1,10 @@
 # Confirm Customer Payment Import
 
-> **Module:** ssi_customer_payment_import
-> **Model:** `customer_payment_import`
-> **Menu:** Financial Accounting > Account Receivable > Customer Payment Imports
-> **Actor:** user in group *Customer Payment Import — User*
-> **State:** `draft` → `confirm`
+> **Module:** ssi_customer_payment_import\
+> **Model:** `customer_payment_import`\
+> **Menu:** Financial Accounting > Account Receivable > Customer Payment Imports\
+> **Actor:** user in group `Customer Payment Import — User`\
+> **State:** `draft` → `confirm`\
 > **Requires:** `01-create`
 
 ## Pre-Condition
@@ -14,7 +14,7 @@
   `draft` to the actor's group.
 - **Config:** An active `approval.template` for this model matches this record and has
   at least one approver level.
-- **Access:** User is in group *Customer Payment Import — User*.
+- **Access:** User is in group _Customer Payment Import — User_.
 
 ## Flow
 
@@ -27,5 +27,4 @@
 ## Post-Condition
 
 - Status changes to **Waiting for Approval**.
-- Approval records are created for each approver level defined by the approval
-  template.
+- Approval records are created for each approver level defined by the approval template.

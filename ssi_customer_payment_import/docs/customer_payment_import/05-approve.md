@@ -1,10 +1,10 @@
 # Approve Customer Payment Import
 
-> **Module:** ssi_customer_payment_import
-> **Model:** `customer_payment_import`
-> **Menu:** Financial Accounting > Account Receivable > Customer Payment Imports
-> **Actor:** user in group *Customer Payment Import — Validator*
-> **State:** `confirm` → `queue_done`
+> **Module:** ssi_customer_payment_import\
+> **Model:** `customer_payment_import`\
+> **Menu:** Financial Accounting > Account Receivable > Customer Payment Imports\
+> **Actor:** user in group `Customer Payment Import — Validator`\
+> **State:** `confirm` → `queue_done`\
 > **Requires:** `04-confirm`
 
 ## Pre-Condition
@@ -12,8 +12,8 @@
 - **Record:** Status is **Waiting for Approval**.
 - **Config:** An active `policy.template` grants `approve_ok` to the actor's group.
 - **Access:** User is registered as an approver on the approval level that is currently
-  **pending**. The standard approval template for this model has a single level open
-  to any user in group *Customer Payment Import — Validator*.
+  **pending**. The standard approval template for this model has a single level open to
+  any user in group _Customer Payment Import — Validator_.
 
 ## Flow
 

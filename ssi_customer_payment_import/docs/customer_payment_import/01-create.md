@@ -1,16 +1,16 @@
 # Create Customer Payment Import
 
-> **Module:** ssi_customer_payment_import
-> **Model:** `customer_payment_import`
-> **Menu:** Financial Accounting > Account Receivable > Customer Payment Imports
-> **Actor:** user in group *Customer Payment Import — User*
-> **State:** `—` → `draft`
+> **Module:** ssi_customer_payment_import\
+> **Model:** `customer_payment_import`\
+> **Menu:** Financial Accounting > Account Receivable > Customer Payment Imports\
+> **Actor:** user in group `Customer Payment Import — User`\
+> **State:** `—` → `draft`\
 > **Inline Actions:** `action_load_data` (Load Data)
 
 ## Pre-Condition
 
 - **Data:** At least one active **Customer Payment Import Type** exists.
-- **Access:** User is in group *Customer Payment Import — User*.
+- **Access:** User is in group _Customer Payment Import — User_.
 
 ## Flow
 
@@ -20,8 +20,8 @@
 3. Fill in the required fields:
    - **Type**: the Customer Payment Import Type that determines the file format and
      allowed Journals/Accounts.
-   - **Journal**: journal used to create the resulting customer payments, restricted
-     to the Journals allowed by **Type**.
+   - **Journal**: journal used to create the resulting customer payments, restricted to
+     the Journals allowed by **Type**.
    - **Date**: defaults to today; change if needed.
 4. On the header, fill in **Account** (destination account for the resulting customer
    payments) unless **Type** has a **Usage Column** configured — in that case the
