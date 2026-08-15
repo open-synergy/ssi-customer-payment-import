@@ -2,7 +2,8 @@
 
 > **Module:** ssi_customer_payment_import_operating_unit
 >
-> **Extends:** ssi_customer_payment_import — model `customer_payment_import`, aksi `01-create`
+> **Extends:** ssi_customer_payment_import — model `customer_payment_import`, aksi
+> `01-create`
 
 ## Additional Pre-Condition
 
@@ -19,8 +20,8 @@ When this module is installed, the create form gains one optional field:
 
 Selecting **Operating Unit** also affects **Journal**:
 
-- **Journal**: the list of allowed Journals is narrowed to those whose Operating
-  Unit(s) either is empty (cross-OU journal, always allowed) or contains the selected
+- **Journal**: the list of allowed Journals is narrowed to those whose Operating Unit(s)
+  either is empty (cross-OU journal, always allowed) or contains the selected
   **Operating Unit**. If the currently selected **Journal** no longer matches after
   changing **Operating Unit**, it is automatically cleared and must be re-selected.
 
