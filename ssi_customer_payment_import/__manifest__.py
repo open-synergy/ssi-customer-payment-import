@@ -24,6 +24,7 @@
         "ssi_transaction_queue_cancel_mixin",
         "queue_job_batch",
         "base_automation",
+        "web_tour",
     ],
     "external_dependencies": {
         "python": ["openpyxl"],
@@ -57,6 +58,7 @@
         # Views
         "views/customer_payment_import_type_views.xml",
         "views/customer_payment_import_views.xml",
+        "views/assets.xml",
     ],
     "demo": [
         "demo/customer_payment_import_type_demo.xml",

@@ -4,3 +4,5 @@
 
 from . import test_customer_payment_import_type
 from . import test_customer_payment_import
+from . import test_ui_customer_payment_import_type
+from . import test_ui_customer_payment_import

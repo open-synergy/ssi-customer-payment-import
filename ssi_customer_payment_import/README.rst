@@ -10,6 +10,13 @@ Import and process customer payment transactions from bank files (CSV or
 XLSX), and automatically create Customer Payments from the imported data.
 
 
+Work Instruction
+================
+
+* `Customer Payment Import Type <docs/customer_payment_import_type/index.html>`_
+* `Customer Payment Import <docs/customer_payment_import/index.html>`_
+
+
 Installation
 ============
 
