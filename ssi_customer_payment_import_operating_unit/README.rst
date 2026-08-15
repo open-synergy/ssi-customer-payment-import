@@ -11,6 +11,12 @@ module. It allows customer payment import documents to be scoped to a specific
 operating unit.
 
 
+Work Instruction
+================
+
+* `Create Customer Payment Import <docs/customer_payment_import/index.html>`_
+
+
 Bug Tracker
 ===========
 

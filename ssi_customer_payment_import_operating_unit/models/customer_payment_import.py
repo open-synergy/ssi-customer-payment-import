@@ -50,7 +50,7 @@ class CustomerPaymentImport(models.Model):
                 )
 
     @api.onchange("operating_unit_id")
-    def _onchange_operating_unit(self):
+    def onchange_journal_id(self):
         """Clear ``journal_id`` when it no longer matches the new OU.
 
         If the currently selected ``journal_id`` has
