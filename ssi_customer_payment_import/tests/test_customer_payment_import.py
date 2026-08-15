@@ -310,14 +310,14 @@ class TestCustomerPaymentImport(YamlTransactionCase):
     def test_process_payment_unregistered_account_leaves_line_in_error(self):
         """``_process_payment`` on an unregistered account writes ``error``.
 
-        Pure Python -- YAML's ``expect_error`` runs the call inside a
-        savepoint that gets rolled back once the expected exception is
-        caught, so the ``_write_error_result`` write ``_process_payment``
-        performs in its ``except`` block before re-raising would be lost
-        if asserted via YAML (same limitation already noted on "Edit raw
-        data then retry resolves the line" in the YAML scenarios).
-        Calling it directly here, with no savepoint around it, keeps the
-        write visible for assertion.
+        Pure Python -- trigger P13 (L-26: YAML's ``expect_error`` runs
+        the call inside a savepoint that gets rolled back once the
+        expected exception is caught, so the ``_write_error_result``
+        write ``_process_payment`` performs in its ``except`` block
+        before re-raising would be lost if asserted via YAML). Same
+        limitation already noted on "Edit raw data then retry resolves
+        the line" in the YAML scenarios. Calling it directly here, with
+        no savepoint around it, keeps the write visible for assertion.
         """
         ctype = self._create_type(code="PYTT-ERRLINE")
         journal = self._create_bank_journal("Test Journal PYTT-ERRLINE")
