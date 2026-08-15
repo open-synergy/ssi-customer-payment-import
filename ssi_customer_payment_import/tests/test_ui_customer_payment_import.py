@@ -36,7 +36,8 @@ class TestUiCustomerPaymentImport(HttpSavepointCase):
             {
                 "name": "TOUR Bank Journal",
                 "type": "general",
-                "code": "TOURJ1",
+                # account.journal.code is size=5 -- keep it short.
+                "code": "TOURJ",
             }
         )
         cls.account = cls.env["account.account"].create(
@@ -85,6 +86,7 @@ class TestUiCustomerPaymentImport(HttpSavepointCase):
         cls.cancel_reason = cls.env["base.cancel_reason"].create(
             {
                 "name": "TOUR Cancel Reason",
+                "code": "TOURCR01",
                 "global_use": True,
             }
         )
