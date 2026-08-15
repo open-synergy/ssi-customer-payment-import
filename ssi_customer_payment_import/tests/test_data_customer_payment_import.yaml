@@ -1,3 +1,6 @@
+options:
+  auto_refresh: true
+
 scenarios:
   - name: "Customer Payment Import - Load Data from CSV file"
     steps:
@@ -36,11 +39,6 @@ scenarios:
         action: "call"
         target: "import_doc"
         method: "action_load_data"
-
-      - step: "Invalidate cache after load"
-        action: "call"
-        target: "import_doc"
-        method: "invalidate_cache"
 
       - step: "Assert two data lines created"
         action: "assert"
@@ -155,11 +153,6 @@ scenarios:
         method: "action_confirm"
         as_user: "base.user_admin"
 
-      - step: "Invalidate cache after confirm"
-        action: "call"
-        target: "import_doc"
-        method: "invalidate_cache"
-
       - step: "Assert state confirm"
         action: "assert"
         target: "import_doc"
@@ -175,11 +168,6 @@ scenarios:
         as_user: "base.user_admin"
         context:
           queue_job__no_delay: true
-
-      - step: "Invalidate cache after approve"
-        action: "call"
-        target: "import_doc"
-        method: "invalidate_cache"
 
       - step: "Assert state done"
         action: "assert"
@@ -308,10 +296,13 @@ scenarios:
         method: "action_confirm"
         as_user: "base.user_admin"
 
-      - step: "Invalidate cache after confirm"
-        action: "call"
+      - step: "Assert state confirm before approve (forces cache refresh)"
+        action: "assert"
         target: "import_doc"
-        method: "invalidate_cache"
+        asserts:
+          state:
+            type: "value"
+            expected: "confirm"
 
       - step: "Approve import (auto post payment)"
         action: "call"
@@ -320,11 +311,6 @@ scenarios:
         as_user: "base.user_admin"
         context:
           queue_job__no_delay: true
-
-      - step: "Invalidate cache after approve"
-        action: "call"
-        target: "import_doc"
-        method: "invalidate_cache"
 
       - step: "Assert state done"
         action: "assert"
@@ -413,10 +399,13 @@ scenarios:
         method: "action_confirm"
         as_user: "base.user_admin"
 
-      - step: "Invalidate cache after confirm"
-        action: "call"
+      - step: "Assert state confirm before approve (forces cache refresh)"
+        action: "assert"
         target: "import_doc"
-        method: "invalidate_cache"
+        asserts:
+          state:
+            type: "value"
+            expected: "confirm"
 
       - step: "Approve import to done"
         action: "call"
@@ -426,11 +415,6 @@ scenarios:
         context:
           queue_job__no_delay: true
 
-      - step: "Invalidate cache after approve"
-        action: "call"
-        target: "import_doc"
-        method: "invalidate_cache"
-
       - step: "Queue to cancel from done"
         action: "call"
         target: "import_doc"
@@ -438,11 +422,6 @@ scenarios:
         as_user: "base.user_admin"
         context:
           queue_job__no_delay: true
-
-      - step: "Invalidate cache after cancel"
-        action: "call"
-        target: "import_doc"
-        method: "invalidate_cache"
 
       - step: "Assert state cancel"
         action: "assert"
@@ -540,10 +519,13 @@ scenarios:
         method: "action_confirm"
         as_user: "base.user_admin"
 
-      - step: "Invalidate cache after confirm"
-        action: "call"
+      - step: "Assert state confirm before approve (forces cache refresh)"
+        action: "assert"
         target: "import_doc"
-        method: "invalidate_cache"
+        asserts:
+          state:
+            type: "value"
+            expected: "confirm"
 
       - step: "Approve import to done (payment posted)"
         action: "call"
@@ -560,11 +542,6 @@ scenarios:
         as_user: "base.user_admin"
         context:
           queue_job__no_delay: true
-
-      - step: "Invalidate cache after cancel"
-        action: "call"
-        target: "import_doc"
-        method: "invalidate_cache"
 
       - step: "Assert state cancel"
         action: "assert"
@@ -662,10 +639,13 @@ scenarios:
         method: "action_confirm"
         as_user: "base.user_admin"
 
-      - step: "Invalidate cache after confirm"
-        action: "call"
+      - step: "Assert state confirm before approve (forces cache refresh)"
+        action: "assert"
         target: "import_doc"
-        method: "invalidate_cache"
+        asserts:
+          state:
+            type: "value"
+            expected: "confirm"
 
       - step: "Approve import to done"
         action: "call"
@@ -674,11 +654,6 @@ scenarios:
         as_user: "base.user_admin"
         context:
           queue_job__no_delay: true
-
-      - step: "Invalidate cache after approve"
-        action: "call"
-        target: "import_doc"
-        method: "invalidate_cache"
 
       - step: "Assert state done"
         action: "assert"
@@ -2007,10 +1982,13 @@ scenarios:
         method: "action_confirm"
         as_user: "base.user_admin"
 
-      - step: "Invalidate cache after confirm"
-        action: "call"
+      - step: "Assert state confirm before approve (forces cache refresh)"
+        action: "assert"
         target: "import_doc"
-        method: "invalidate_cache"
+        asserts:
+          state:
+            type: "value"
+            expected: "confirm"
 
       - step: "Approve import (auto queue_done, synchronous job)"
         action: "call"
@@ -2019,11 +1997,6 @@ scenarios:
         as_user: "base.user_admin"
         context:
           queue_job__no_delay: true
-
-      - step: "Invalidate cache after approve"
-        action: "call"
-        target: "import_doc"
-        method: "invalidate_cache"
 
       - step: "Assert import reached done with one done and one ignored line"
         action: "assert"
@@ -2136,10 +2109,13 @@ scenarios:
         method: "action_confirm"
         as_user: "base.user_admin"
 
-      - step: "Invalidate cache after confirm"
-        action: "call"
+      - step: "Assert state confirm before approve (forces cache refresh)"
+        action: "assert"
         target: "import_doc"
-        method: "invalidate_cache"
+        asserts:
+          state:
+            type: "value"
+            expected: "confirm"
 
       - step: "Approve import (auto queue_done, synchronous job)"
         action: "call"
@@ -2148,11 +2124,6 @@ scenarios:
         as_user: "base.user_admin"
         context:
           queue_job__no_delay: true
-
-      - step: "Invalidate cache after approve"
-        action: "call"
-        target: "import_doc"
-        method: "invalidate_cache"
 
       - step: "Assert import reached done with no line ignored"
         action: "assert"
