@@ -13,10 +13,12 @@
         "ssi_customer_payment_import",
         "ssi_operating_unit_mixin",
         "ssi_financial_accounting_operating_unit",
+        "web_tour",
     ],
     "data": [
         "security/res_group/res_group_data.xml",
         "security/ir_rule/ir_rule_data.xml",
-        "view/customer_payment_import_views.xml",
+        "views/customer_payment_import_views.xml",
+        "views/assets.xml",
     ],
 }
