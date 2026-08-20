@@ -239,6 +239,20 @@ scenarios:
         # explicitly to exercise the true "no OU" path required by
         # the Design Decision ("dokumen tanpa operating_unit_id = hasil
         # konfigurator diteruskan tanpa penyaringan").
+        #
+        # Plain YAML `false` does NOT work here: Form.__setattr__
+        # (odoo/tests/common.py) requires a `BaseModel` instance for
+        # many2one fields (`assert isinstance(value, BaseModel) and
+        # value._name == descr['relation']`, then reads `value.id`) —
+        # a raw `False`/`None` fails that assert before it ever gets
+        # to `.id`. odoo-yaml-test's `set:` passes values through
+        # unresolved-for-type (`_apply_form_op`/`_resolve_value_recursive`
+        # in odoo_yaml_test/case.py), so there is no field-type coercion
+        # step to turn `false` into an empty recordset either. `EVAL:`
+        # gives access to `env`, and `env['operating.unit']` (no ids
+        # browsed) IS a valid, empty `BaseModel` of the right comodel —
+        # its `.id` is `False`, so assigning it clears the field exactly
+        # like a real empty recordset would.
         action: "form"
         model: "customer_payment_import"
         as_user: "base.user_admin"
@@ -247,7 +261,7 @@ scenarios:
           - set:
               type_id: "REC: ctype_form_filter"
           - set:
-              operating_unit_id: false
+              operating_unit_id: "EVAL: env['operating.unit']"
           - assert:
               allowed_journal_ids:
                 type: "m2m"
