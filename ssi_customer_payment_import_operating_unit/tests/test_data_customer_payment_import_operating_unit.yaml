@@ -225,6 +225,20 @@ scenarios:
         # so `expected_count: 2` already proves neither was dropped;
         # which two survive with an OU set is nailed down below by the
         # saved-record assert, which reads a plain recordset.
+        #
+        # `operating_unit_id` is NEVER actually empty here unless
+        # cleared explicitly: `mixin.single_operating_unit` defaults it
+        # from `res.users.operating_unit_default_get()`
+        # (ssi_operating_unit_mixin/models/mixin_single_operating_unit.py),
+        # and `base.user_admin` (used by every step in this file via
+        # `as_user:`) defaults to `operating_unit.main_operating_unit`
+        # — proven by the "Operating Unit defaults from user" scenario
+        # above. That default OU is not `ou_form_x`, so leaving the
+        # field untouched would still filter on a (mismatched) OU and
+        # drop journal A, defeating the point of this step. Clear it
+        # explicitly to exercise the true "no OU" path required by
+        # the Design Decision ("dokumen tanpa operating_unit_id = hasil
+        # konfigurator diteruskan tanpa penyaringan").
         action: "form"
         model: "customer_payment_import"
         as_user: "base.user_admin"
@@ -232,6 +246,8 @@ scenarios:
         ops:
           - set:
               type_id: "REC: ctype_form_filter"
+          - set:
+              operating_unit_id: false
           - assert:
               allowed_journal_ids:
                 type: "m2m"
