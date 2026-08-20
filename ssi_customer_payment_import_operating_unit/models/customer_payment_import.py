@@ -39,15 +39,33 @@ class CustomerPaymentImport(models.Model):
         journal, always allowed) or contains the document's
         ``operating_unit_id``. Records without an ``operating_unit_id``
         keep the base result unfiltered.
+
+        Comparison uses ``.id``/``.ids``, never recordset ``in``. On an
+        unsaved (``NewId``) document, ``allowed_journal_ids`` (a
+        ``Many2many`` set by ``super()``) caches its journals as
+        ``NewId``-wrapped pseudo-records — ``_RelationalMulti.
+        convert_to_cache`` in ``odoo/fields.py`` wraps every x2many id
+        of a new record as ``NewId``. Reading a stored field on such a
+        pseudo-record, like ``j.operating_unit_ids`` here, re-wraps its
+        ids as ``NewId`` too when Odoo falls back to the origin
+        record's value (``Field.__get__``, "new record with origin"
+        branch). ``NewId`` never compares equal to a plain ``int``, so
+        ``record.operating_unit_id in j.operating_unit_ids`` is always
+        ``False`` in that case even when the Operating Unit truly
+        matches. ``.ids`` unwraps ``NewId`` back to its origin integer
+        (``BaseModel.ids`` / ``models.origin_ids``), so comparing
+        ``.id``/``.ids`` gives the same result on saved and unsaved
+        records alike.
         """
         super()._compute_allowed_journal_ids()
         for record in self:
+            result = record.allowed_journal_ids
             if record.operating_unit_id:
-                journals = record.allowed_journal_ids
-                record.allowed_journal_ids = journals.filtered(
+                result = result.filtered(
                     lambda j: not j.operating_unit_ids
-                    or record.operating_unit_id in j.operating_unit_ids
+                    or record.operating_unit_id.id in j.operating_unit_ids.ids
                 )
+            record.allowed_journal_ids = result
 
     @api.onchange("operating_unit_id")
     def onchange_journal_id(self):
@@ -58,11 +76,16 @@ class CustomerPaymentImport(models.Model):
         ``operating_unit_id``, ``journal_id`` is emptied so the user picks
         a compatible one. Journals without ``operating_unit_ids``
         (cross-OU) are never cleared by this onchange.
+
+        Comparison uses ``.id``/``.ids`` rather than recordset ``in``,
+        for the same reason as ``_compute_allowed_journal_ids`` above:
+        it keeps working even if either side is ever backed by a
+        ``NewId`` pseudo-record.
         """
         if (
             self.journal_id
             and self.journal_id.operating_unit_ids
-            and self.operating_unit_id not in self.journal_id.operating_unit_ids
+            and self.operating_unit_id.id not in self.journal_id.operating_unit_ids.ids
         ):
             self.journal_id = False
 

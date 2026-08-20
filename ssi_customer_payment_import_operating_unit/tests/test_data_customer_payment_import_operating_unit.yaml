@@ -167,6 +167,147 @@ scenarios:
               - "REC: journal_filter_a"
               - "REC: journal_filter_c"
 
+  - name: "Customer Payment Import - Operating Unit journal filter via unsaved Form"
+    steps:
+      - step: "Create operating unit X"
+        action: "create"
+        model: "operating.unit"
+        save_as: "ou_form_x"
+        values:
+          name: "OU Form Filter Test X"
+          code: "OUFFX1"
+          partner_id: "REF: base.main_partner"
+
+      - step: "Create journal A scoped to operating unit X"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal_form_a"
+        values:
+          name: "OU Form Filter Journal A"
+          type: "bank"
+          operating_unit_ids:
+            - - 6
+              - 0
+              - - "REC: ou_form_x.id"
+
+      - step: "Create journal without operating unit restriction"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal_form_cross"
+        values:
+          name: "OU Form Filter Journal Cross"
+          type: "bank"
+
+      - step: "Create type manually restricted to both journals"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype_form_filter"
+        values:
+          name: "OU Form Filter Test Type"
+          code: "OUFF001"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          journal_selection_method: "manual"
+          journal_ids:
+            - - 6
+              - 0
+              - - "REC: journal_form_a.id"
+                - "REC: journal_form_cross.id"
+
+      - step: "On an unsaved Form without OU, both journals are allowed"
+        # `allowed_journal_ids` read on an open Form comes back as
+        # odoo.tests.common.M2MProxy, not a recordset: it supports
+        # `len()` (`check: "count"`) but has no `.ids`, so
+        # `check: "exact"`/`"contains"` (which need `.ids` to build a
+        # comparable id set) cannot be used here. The Type restricts
+        # allowed journals to exactly {A, Cross} (`journal_ids` above),
+        # so `expected_count: 2` already proves neither was dropped;
+        # which two survive with an OU set is nailed down below by the
+        # saved-record assert, which reads a plain recordset.
+        #
+        # `operating_unit_id` is NEVER actually empty here unless
+        # cleared explicitly: `mixin.single_operating_unit` defaults it
+        # from `res.users.operating_unit_default_get()`
+        # (ssi_operating_unit_mixin/models/mixin_single_operating_unit.py),
+        # and `base.user_admin` (used by every step in this file via
+        # `as_user:`) defaults to `operating_unit.main_operating_unit`
+        # — proven by the "Operating Unit defaults from user" scenario
+        # above. That default OU is not `ou_form_x`, so leaving the
+        # field untouched would still filter on a (mismatched) OU and
+        # drop journal A, defeating the point of this step. Clear it
+        # explicitly to exercise the true "no OU" path required by
+        # the Design Decision ("dokumen tanpa operating_unit_id = hasil
+        # konfigurator diteruskan tanpa penyaringan").
+        #
+        # Plain YAML `false` does NOT work here: Form.__setattr__
+        # (odoo/tests/common.py) requires a `BaseModel` instance for
+        # many2one fields (`assert isinstance(value, BaseModel) and
+        # value._name == descr['relation']`, then reads `value.id`) —
+        # a raw `False`/`None` fails that assert before it ever gets
+        # to `.id`. odoo-yaml-test's `set:` passes values through
+        # unresolved-for-type (`_apply_form_op`/`_resolve_value_recursive`
+        # in odoo_yaml_test/case.py), so there is no field-type coercion
+        # step to turn `false` into an empty recordset either. `EVAL:`
+        # gives access to `env`, and `env['operating.unit']` (no ids
+        # browsed) IS a valid, empty `BaseModel` of the right comodel —
+        # its `.id` is `False`, so assigning it clears the field exactly
+        # like a real empty recordset would.
+        action: "form"
+        model: "customer_payment_import"
+        as_user: "base.user_admin"
+        save: false
+        ops:
+          - set:
+              type_id: "REC: ctype_form_filter"
+          - set:
+              operating_unit_id: "EVAL: env['operating.unit']"
+          - assert:
+              allowed_journal_ids:
+                type: "m2m"
+                check: "count"
+                expected_count: 2
+
+      - step: "Setting OU X on the unsaved Form keeps A (matching OU) and Cross"
+        # Before the fix, A (OU-scoped, matching) was wrongly dropped
+        # by the NewId-vs-int comparison bug — this step's
+        # `expected_count: 2` is 1 on unfixed code, proving it red.
+        action: "form"
+        model: "customer_payment_import"
+        as_user: "base.user_admin"
+        save: false
+        ops:
+          - set:
+              type_id: "REC: ctype_form_filter"
+          - set:
+              operating_unit_id: "REC: ou_form_x"
+          - assert:
+              allowed_journal_ids:
+                type: "m2m"
+                check: "count"
+                expected_count: 2
+
+      - step: "Saved record with the same OU is created"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_form_saved"
+        as_user: "base.user_admin"
+        values:
+          type_id: "REC: ctype_form_filter.id"
+          operating_unit_id: "REC: ou_form_x.id"
+          journal_id: "REC: journal_form_a.id"
+
+      - step: "Assert saved record's allowed_journal_ids matches the Form result"
+        action: "assert"
+        target: "import_form_saved"
+        asserts:
+          allowed_journal_ids:
+            type: "m2m"
+            check: "exact"
+            expected_records:
+              - "REC: journal_form_a"
+              - "REC: journal_form_cross"
+
   - name: "Customer Payment Import - Operating Unit onchange clears mismatched journal"
     steps:
       - step: "Create operating unit X"
