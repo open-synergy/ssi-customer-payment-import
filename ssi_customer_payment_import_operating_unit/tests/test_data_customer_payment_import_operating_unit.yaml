@@ -216,6 +216,15 @@ scenarios:
                 - "REC: journal_form_cross.id"
 
       - step: "On an unsaved Form without OU, both journals are allowed"
+        # `allowed_journal_ids` read on an open Form comes back as
+        # odoo.tests.common.M2MProxy, not a recordset: it supports
+        # `len()` (`check: "count"`) but has no `.ids`, so
+        # `check: "exact"`/`"contains"` (which need `.ids` to build a
+        # comparable id set) cannot be used here. The Type restricts
+        # allowed journals to exactly {A, Cross} (`journal_ids` above),
+        # so `expected_count: 2` already proves neither was dropped;
+        # which two survive with an OU set is nailed down below by the
+        # saved-record assert, which reads a plain recordset.
         action: "form"
         model: "customer_payment_import"
         as_user: "base.user_admin"
@@ -226,12 +235,13 @@ scenarios:
           - assert:
               allowed_journal_ids:
                 type: "m2m"
-                check: "exact"
-                expected_records:
-                  - "REC: journal_form_a"
-                  - "REC: journal_form_cross"
+                check: "count"
+                expected_count: 2
 
       - step: "Setting OU X on the unsaved Form keeps A (matching OU) and Cross"
+        # Before the fix, A (OU-scoped, matching) was wrongly dropped
+        # by the NewId-vs-int comparison bug — this step's
+        # `expected_count: 2` is 1 on unfixed code, proving it red.
         action: "form"
         model: "customer_payment_import"
         as_user: "base.user_admin"
@@ -244,10 +254,8 @@ scenarios:
           - assert:
               allowed_journal_ids:
                 type: "m2m"
-                check: "exact"
-                expected_records:
-                  - "REC: journal_form_a"
-                  - "REC: journal_form_cross"
+                check: "count"
+                expected_count: 2
 
       - step: "Saved record with the same OU is created"
         action: "create"
