@@ -167,6 +167,109 @@ scenarios:
               - "REC: journal_filter_a"
               - "REC: journal_filter_c"
 
+  - name: "Customer Payment Import - Operating Unit journal filter via unsaved Form"
+    steps:
+      - step: "Create operating unit X"
+        action: "create"
+        model: "operating.unit"
+        save_as: "ou_form_x"
+        values:
+          name: "OU Form Filter Test X"
+          code: "OUFFX1"
+          partner_id: "REF: base.main_partner"
+
+      - step: "Create journal A scoped to operating unit X"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal_form_a"
+        values:
+          name: "OU Form Filter Journal A"
+          type: "bank"
+          operating_unit_ids:
+            - - 6
+              - 0
+              - - "REC: ou_form_x.id"
+
+      - step: "Create journal without operating unit restriction"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal_form_cross"
+        values:
+          name: "OU Form Filter Journal Cross"
+          type: "bank"
+
+      - step: "Create type manually restricted to both journals"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype_form_filter"
+        values:
+          name: "OU Form Filter Test Type"
+          code: "OUFF001"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          journal_selection_method: "manual"
+          journal_ids:
+            - - 6
+              - 0
+              - - "REC: journal_form_a.id"
+                - "REC: journal_form_cross.id"
+
+      - step: "On an unsaved Form without OU, both journals are allowed"
+        action: "form"
+        model: "customer_payment_import"
+        as_user: "base.user_admin"
+        save: false
+        ops:
+          - set:
+              type_id: "REC: ctype_form_filter"
+          - assert:
+              allowed_journal_ids:
+                type: "m2m"
+                check: "exact"
+                expected_records:
+                  - "REC: journal_form_a"
+                  - "REC: journal_form_cross"
+
+      - step: "Setting OU X on the unsaved Form keeps A (matching OU) and Cross"
+        action: "form"
+        model: "customer_payment_import"
+        as_user: "base.user_admin"
+        save: false
+        ops:
+          - set:
+              type_id: "REC: ctype_form_filter"
+          - set:
+              operating_unit_id: "REC: ou_form_x"
+          - assert:
+              allowed_journal_ids:
+                type: "m2m"
+                check: "exact"
+                expected_records:
+                  - "REC: journal_form_a"
+                  - "REC: journal_form_cross"
+
+      - step: "Saved record with the same OU is created"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_form_saved"
+        as_user: "base.user_admin"
+        values:
+          type_id: "REC: ctype_form_filter.id"
+          operating_unit_id: "REC: ou_form_x.id"
+          journal_id: "REC: journal_form_a.id"
+
+      - step: "Assert saved record's allowed_journal_ids matches the Form result"
+        action: "assert"
+        target: "import_form_saved"
+        asserts:
+          allowed_journal_ids:
+            type: "m2m"
+            check: "exact"
+            expected_records:
+              - "REC: journal_form_a"
+              - "REC: journal_form_cross"
+
   - name: "Customer Payment Import - Operating Unit onchange clears mismatched journal"
     steps:
       - step: "Create operating unit X"

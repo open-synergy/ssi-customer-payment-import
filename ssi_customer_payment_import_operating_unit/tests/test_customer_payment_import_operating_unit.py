@@ -12,7 +12,8 @@ class TestCustomerPaymentImportOperatingUnit(YamlTransactionCase):
     """Test Operating Unit behavior on ``customer_payment_import``.
 
     Covers ``operating_unit_id`` propagation/defaulting, the
-    ``allowed_journal_ids`` Operating Unit filter, the onchange that
+    ``allowed_journal_ids`` Operating Unit filter on both saved
+    records and unsaved (``NewId``) Form records, the onchange that
     clears a mismatched ``journal_id``, and the
     ``_check_journal_operating_unit`` data-level constraint.
     """
