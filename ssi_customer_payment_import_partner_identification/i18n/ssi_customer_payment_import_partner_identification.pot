@@ -1,0 +1,131 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* ssi_customer_payment_import_partner_identification
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 14.0\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: ssi_customer_payment_import_partner_identification
+#: code:addons/ssi_customer_payment_import_partner_identification/models/customer_payment_import_data.py:0
+#, python-format
+msgid ""
+"\n"
+"Context: Processing customer payment import data line\n"
+"Document: %s (sequence %s)\n"
+"Problem: %s partners found with identification value '%s' under\n"
+"         category '%s'\n"
+"Solution: Ensure only one partner is registered with that\n"
+"          identification value under this category\n"
+"          (res.partner.id_number), correct the data in this line,\n"
+"          then retry the queue job"
+msgstr ""
+
+#. module: ssi_customer_payment_import_partner_identification
+#: code:addons/ssi_customer_payment_import_partner_identification/models/customer_payment_import_data.py:0
+#, python-format
+msgid ""
+"\n"
+"Context: Processing customer payment import data line\n"
+"Document: %s (sequence %s)\n"
+"Problem: No partner found with identification value '%s' under\n"
+"         category '%s'\n"
+"Solution: Register the identification number on the partner\n"
+"          (res.partner.id_number), correct the data in this line, or\n"
+"          adjust Partner Identification Category on the import Type,\n"
+"          then retry the queue job"
+msgstr ""
+
+#. module: ssi_customer_payment_import_partner_identification
+#: code:addons/ssi_customer_payment_import_partner_identification/models/customer_payment_import_type.py:0
+#, python-format
+msgid ""
+"\n"
+"Context: Saving customer payment import type\n"
+"Type: %s\n"
+"Problem: Partner Matching Method is 'Partner Identification' but\n"
+"         Partner Identification Column or Partner Identification\n"
+"         Category is empty\n"
+"Solution: Fill in both Partner Identification Column and Partner\n"
+"          Identification Category, or choose a different Partner\n"
+"          Matching Method"
+msgstr ""
+
+#. module: ssi_customer_payment_import_partner_identification
+#: model:ir.model.fields,help:ssi_customer_payment_import_partner_identification.field_customer_payment_import_type__partner_identification_column
+msgid ""
+"Column name (or 0-based index if No Header Line is checked) containing the "
+"identification number used to identify the paying customer, matched against "
+"res.partner.id_number. Required only when Partner Matching Method = Partner "
+"Identification."
+msgstr ""
+
+#. module: ssi_customer_payment_import_partner_identification
+#: model:ir.model,name:ssi_customer_payment_import_partner_identification.model_customer_payment_import_data
+msgid "Customer Payment Import - Data"
+msgstr ""
+
+#. module: ssi_customer_payment_import_partner_identification
+#: model:ir.model,name:ssi_customer_payment_import_partner_identification.model_customer_payment_import_type
+msgid "Customer Payment Import Type"
+msgstr ""
+
+#. module: ssi_customer_payment_import_partner_identification
+#: model:ir.model.fields,field_description:ssi_customer_payment_import_partner_identification.field_customer_payment_import_data__display_name
+#: model:ir.model.fields,field_description:ssi_customer_payment_import_partner_identification.field_customer_payment_import_type__display_name
+msgid "Display Name"
+msgstr ""
+
+#. module: ssi_customer_payment_import_partner_identification
+#: model:ir.model.fields,field_description:ssi_customer_payment_import_partner_identification.field_customer_payment_import_data__id
+#: model:ir.model.fields,field_description:ssi_customer_payment_import_partner_identification.field_customer_payment_import_type__id
+msgid "ID"
+msgstr ""
+
+#. module: ssi_customer_payment_import_partner_identification
+#: model:ir.model.fields,help:ssi_customer_payment_import_partner_identification.field_customer_payment_import_type__partner_id_category_id
+msgid ""
+"Identification category (res.partner.id_category) that Partner "
+"Identification Column values are matched against. Required only when Partner"
+" Matching Method = Partner Identification."
+msgstr ""
+
+#. module: ssi_customer_payment_import_partner_identification
+#: model:ir.model.fields,field_description:ssi_customer_payment_import_partner_identification.field_customer_payment_import_data____last_update
+#: model:ir.model.fields,field_description:ssi_customer_payment_import_partner_identification.field_customer_payment_import_type____last_update
+msgid "Last Modified on"
+msgstr ""
+
+#. module: ssi_customer_payment_import_partner_identification
+#: model:ir.model.fields,help:ssi_customer_payment_import_partner_identification.field_customer_payment_import_type__partner_matching_method
+msgid ""
+"Method used to identify the paying customer from each row. Other modules can"
+" add more choices to this Selection through selection_add."
+msgstr ""
+
+#. module: ssi_customer_payment_import_partner_identification
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import_partner_identification.selection__customer_payment_import_type__partner_matching_method__identification
+msgid "Partner Identification"
+msgstr ""
+
+#. module: ssi_customer_payment_import_partner_identification
+#: model:ir.model.fields,field_description:ssi_customer_payment_import_partner_identification.field_customer_payment_import_type__partner_id_category_id
+msgid "Partner Identification Category"
+msgstr ""
+
+#. module: ssi_customer_payment_import_partner_identification
+#: model:ir.model.fields,field_description:ssi_customer_payment_import_partner_identification.field_customer_payment_import_type__partner_identification_column
+msgid "Partner Identification Column"
+msgstr ""
+
+#. module: ssi_customer_payment_import_partner_identification
+#: model:ir.model.fields,field_description:ssi_customer_payment_import_partner_identification.field_customer_payment_import_type__partner_matching_method
+msgid "Partner Matching Method"
+msgstr ""
