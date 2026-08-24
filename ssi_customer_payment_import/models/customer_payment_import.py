@@ -133,17 +133,6 @@ class CustomerPaymentImport(models.Model):  # pylint: disable=too-few-public-met
         domain="[('id', 'in', allowed_journal_ids)]",
         help="Journal used to create the customer payments from this import.",
     )
-    usage_column = fields.Char(
-        string="Usage Column",
-        related="type_id.usage_column",
-        store=False,
-        readonly=True,
-        help=(
-            "Usage Column configured on the Type. Only used by the form "
-            "view, to hide the document Account when the destination "
-            "account is resolved per row instead."
-        ),
-    )
     allowed_account_ids = fields.Many2many(
         string="Allowed Accounts",
         comodel_name="account.account",

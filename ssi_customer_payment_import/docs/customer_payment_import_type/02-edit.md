@@ -16,9 +16,8 @@
    menu.
 2. Find and open the record to edit.
 3. Change the required fields.
-4. If **Usage Column** is filled in, ensure the **Usage Account Mapping** tab still has
-   at least one line — saving with **Usage Column** filled in and no mapping line is
-   rejected.
+4. On the **Usage Account Mapping** tab, ensure no two lines share the same **Usage** —
+   saving two lines mapping the same Usage is rejected.
 5. Click **Save**.
 
 ## Post-Condition

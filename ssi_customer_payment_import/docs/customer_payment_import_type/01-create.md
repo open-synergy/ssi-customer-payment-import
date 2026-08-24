@@ -28,7 +28,7 @@
    **Sheet Name**, **No Header Line**, **Skip Empty Lines**, and **Row Offset** to match
    the bank file this type will parse.
 5. On the **Column Mapping** tab, optionally fill in **Communication Column**, **Unique
-   Reference Column**, **Usage Column**, **Exclude Column**, and **Exclude Values**.
+   Reference Column**, **Exclude Column**, and **Exclude Values**.
 6. On the **Payment Option** tab, set **Auto Post** if the resulting customer payments
    should be posted automatically instead of left in draft.
 7. On the **Journal Configuration** tab, set **Journal Selection Method** and fill in
@@ -37,10 +37,12 @@
 8. On the **Account Configuration** tab, set **Account Selection Method** and fill in
    **Accounts**, **Account Domain**, or **Account Python Code** accordingly, to
    determine which accounts are allowed.
-9. If **Usage Column** is filled in, open the **Usage Account Mapping** tab and add at
-   least one line mapping a **Usage** value to an **Account** — an import document using
-   this type will read the destination account per row from this mapping instead of from
-   a single document-level Account.
+9. On the **Usage Account Mapping** tab, optionally add lines mapping a **Usage** (from
+   the bank account usage master data, `res_partner_bank_usage`) to an **Account** — an
+   import document using this type will resolve the destination account per row from the
+   usage configured on the paying customer's bank account (`res.partner.bank`
+   **Usage**), falling back to the document-level Account when the bank account has no
+   usage, or its usage is not mapped here.
 10. Click **Save**.
 
 ## Post-Condition

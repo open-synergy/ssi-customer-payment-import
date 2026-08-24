@@ -88,7 +88,7 @@ odoo.define("ssi_customer_payment_import.customer_payment_import_tour", function
                         ".ui-autocomplete .ui-menu-item a:contains(TOUR Bank Journal)",
                     in_modal: false,
                 },
-                // ── Flow 4 — Fill in Account (Type has no Usage Column).
+                // ── Flow 4 — Fill in Account.
                 {
                     content: "Select the Account",
                     trigger: ".o_field_many2one[name='account_id'] input",

@@ -154,6 +154,21 @@ class CustomerPaymentImportData(models.Model):  # pylint: disable=too-few-public
             )
         return self.env["res.partner"]
 
+    def _find_bank_account(self, acc_number):
+        """Return the res.partner.bank matching ``acc_number`` (compared
+        after sanitization).
+
+        :param acc_number: raw bank account number read from the row
+        :return: matched ``res.partner.bank`` recordset, possibly
+            empty
+        """
+        self.ensure_one()
+        sanitized = sanitize_account_number(str(acc_number or ""))
+        bank = self.env["res.partner.bank"]
+        if sanitized:
+            bank = bank.search([("sanitized_acc_number", "=", sanitized)], limit=1)
+        return bank
+
     def _find_partner_by_bank_account(self, acc_number):
         """Return the res.partner owning the res.partner.bank matching
         ``acc_number`` (compared after sanitization).
@@ -164,11 +179,7 @@ class CustomerPaymentImportData(models.Model):  # pylint: disable=too-few-public
             with a matching sanitized account number exists
         """
         self.ensure_one()
-        sanitized = sanitize_account_number(str(acc_number or ""))
-        bank = self.env["res.partner.bank"]
-        if sanitized:
-            bank = bank.search([("sanitized_acc_number", "=", sanitized)], limit=1)
-        partner = bank.partner_id
+        partner = self._find_bank_account(acc_number).partner_id
         if not partner:
             imp = self.import_id
             raise UserError(
@@ -183,6 +194,26 @@ Solution: Register the bank account on the partner (res.partner.bank),
                 % (imp.name or str(imp.id), self.sequence, acc_number)
             )
         return partner
+
+    def _get_usage(self, row):
+        """Resolve the paying bank account's usage for ``row``.
+
+        Dispatches on the import Type's ``partner_matching_method``,
+        mirroring ``_find_partner``. Extension point: a module adding
+        another value to that Selection overrides this method with
+        its own ``elif`` branch for that value, then falls through to
+        ``super()._get_usage(row)``.
+
+        :param row: dict of column name/index to cell value, as
+            returned by ``_get_row_data``
+        :return: ``res_partner_bank_usage`` recordset, possibly empty
+        """
+        self.ensure_one()
+        ctype = self._get_type()
+        if ctype.partner_matching_method == "bank":
+            bank = self._find_bank_account(row.get(ctype.partner_bank_account_column))
+            return bank.usage_id
+        return self.env["res_partner_bank_usage"]
 
     def _parse_amount(self, value):
         """Parse ``value`` (number or string, possibly with thousands/decimal
@@ -453,9 +484,9 @@ Solution: Verify the Date Format on the import Type matches the actual data,
         Walks an ordered fallback chain and returns the first
         non-empty result; an unmapped usage is never an error:
 
-        1. the account mapped to the row's usage on the import Type,
-           when the Type has a ``usage_column`` configured and the
-           row's value matches one of its mapping lines;
+        1. the account mapped, on the import Type, to the paying bank
+           account's usage (``res.partner.bank.usage_id``), when it is
+           set and matches one of the Type's mapping lines;
         2. the ``account_id`` of the import document header;
         3. the paying partner's default receivable account.
 
@@ -470,8 +501,9 @@ Solution: Verify the Date Format on the import Type matches the actual data,
         """
         self.ensure_one()
         ctype = self._get_type()
-        if ctype.usage_column:
-            account = ctype._get_account_by_usage(row.get(ctype.usage_column))
+        usage = self._get_usage(row)
+        if usage:
+            account = ctype._get_account_by_usage(usage)
             if account:
                 return account
         if self.import_id.account_id:
