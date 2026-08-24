@@ -166,7 +166,23 @@ scenarios:
           user_type_id: "REF: account.data_account_type_receivable"
           reconcile: true
 
-      - step: "Create type with a usage column and two mapping lines"
+      - step: "Create the Uang Sekolah bank account usage"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_school"
+        values:
+          name: "Uang Sekolah - Type Config"
+          code: "TSTUS01"
+
+      - step: "Create the Uang Pangkal bank account usage"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_entrance"
+        values:
+          name: "Uang Pangkal - Type Config"
+          code: "TSTUS02"
+
+      - step: "Create type with two usage mapping lines"
         action: "create"
         model: "customer_payment_import_type"
         save_as: "ctype"
@@ -176,26 +192,22 @@ scenarios:
           date_column: "date"
           partner_bank_account_column: "account_number"
           amount_column: "amount"
-          usage_column: "usage"
           account_mapping_ids:
             - - 0
               - 0
               - sequence: 10
-                usage_value: "Uang Sekolah"
+                usage_id: "REC: usage_school.id"
                 account_id: "REC: account_enrollment.id"
             - - 0
               - 0
               - sequence: 20
-                usage_value: "Uang Pangkal"
+                usage_id: "REC: usage_entrance.id"
                 account_id: "REC: account_admission.id"
 
       - step: "Assert the usage configuration persisted"
         action: "assert"
         target: "ctype"
         asserts:
-          usage_column:
-            type: "value"
-            expected: "usage"
           account_mapping_ids:
             type: "o2m"
             check: "count"
@@ -206,7 +218,7 @@ scenarios:
         model: "customer_payment_import_type.account_mapping"
         domain:
           - ["type_id", "=", "REC: ctype.id"]
-          - ["usage_value", "=", "Uang Sekolah"]
+          - ["usage_id", "=", "REC: usage_school.id"]
         save_as: "mapping_school"
         expect_count: 1
 
@@ -235,6 +247,14 @@ scenarios:
           user_type_id: "REF: account.data_account_type_receivable"
           reconcile: true
 
+      - step: "Create a bank account usage"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_school"
+        values:
+          name: "Uang Sekolah - Configurator"
+          code: "TSTUS03"
+
       - step: "Create type whose account domain matches that single account"
         action: "create"
         model: "customer_payment_import_type"
@@ -245,7 +265,6 @@ scenarios:
           date_column: "date"
           partner_bank_account_column: "account_number"
           amount_column: "amount"
-          usage_column: "usage"
           account_selection_method: "domain"
           account_domain:
             'EVAL: "[(''id'', ''='', %d)]" % registry[''account_allowed''].id'
@@ -253,7 +272,7 @@ scenarios:
             - - 0
               - 0
               - sequence: 10
-                usage_value: "Uang Sekolah"
+                usage_id: "REC: usage_school.id"
                 account_id: "REC: account_allowed.id"
 
       - step: "Get the mapping line"
@@ -286,9 +305,15 @@ scenarios:
           user_type_id: "REF: account.data_account_type_receivable"
           reconcile: true
 
-      - step:
-          "Creating a type whose two mapping lines differ only by letter case and
-          padding is rejected"
+      - step: "Create a bank account usage"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_school"
+        values:
+          name: "Uang Sekolah - Duplicate"
+          code: "TSTUS04"
+
+      - step: "Creating a type whose two mapping lines share the same usage is rejected"
         action: "create"
         model: "customer_payment_import_type"
         values:
@@ -297,17 +322,16 @@ scenarios:
           date_column: "date"
           partner_bank_account_column: "account_number"
           amount_column: "amount"
-          usage_column: "usage"
           account_mapping_ids:
             - - 0
               - 0
               - sequence: 10
-                usage_value: "Uang Sekolah"
+                usage_id: "REC: usage_school.id"
                 account_id: "REC: account_dup.id"
             - - 0
               - 0
               - sequence: 20
-                usage_value: "  uang sekolah  "
+                usage_id: "REC: usage_school.id"
                 account_id: "REC: account_dup.id"
         expect_error:
           type: "ValidationError"
@@ -330,22 +354,6 @@ scenarios:
           amount_format: "manual"
           amount_thousand_separator: "dot"
           amount_decimal_separator: "dot"
-        expect_error:
-          type: "ValidationError"
-
-  - name:
-      "Customer Payment Import Type - Usage Column without any mapping line is rejected"
-    steps:
-      - step: "Creating a type with a usage column but no mapping line is rejected"
-        action: "create"
-        model: "customer_payment_import_type"
-        values:
-          name: "Usage Column Without Mapping Test Type"
-          code: "UMCT004"
-          date_column: "date"
-          partner_bank_account_column: "account_number"
-          amount_column: "amount"
-          usage_column: "usage"
         expect_error:
           type: "ValidationError"
 

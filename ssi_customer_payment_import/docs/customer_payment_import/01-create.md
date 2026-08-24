@@ -23,9 +23,11 @@
    - **Journal**: journal used to create the resulting customer payments, restricted to
      the Journals allowed by **Type**.
    - **Date**: defaults to today; change if needed.
-4. On the header, fill in **Account** (destination account for the resulting customer
-   payments) unless **Type** has a **Usage Column** configured — in that case the
-   **Account** field is hidden and the destination account is resolved per row instead.
+4. On the header, optionally fill in **Account** (fallback destination account for the
+   resulting customer payments). When **Type** has a Usage Account Mapping configured,
+   the destination account is resolved first from the usage of the paying customer's
+   bank account; **Account** is only used as a fallback for rows whose bank account has
+   no usage, or whose usage is not mapped.
 5. Upload the bank file on **Import File**.
 6. On the **Import Data** tab, click **Load Data** to read **Import File** and create
    one **Import Data** line per row. You may re-click **Load Data** after replacing

@@ -10,12 +10,13 @@ class CustomerPaymentImportTypeAccountMapping(models.Model):
     """
     Detail line of Customer Payment Import Type.
 
-    One line binds a single usage value -- as written in the Usage
-    Column of the bank file -- to the destination account the customer
-    payment created from that row must land on. This lets one bank
-    statement file feed several receivable accounts (e.g. tuition fees
-    against Enrollment Receivable, entrance fees against Admission
-    Receivable) without splitting the file per usage by hand.
+    One line binds a single ``res_partner_bank_usage`` -- the usage
+    configured on the paying customer's bank account -- to the
+    destination account the customer payment created from that row
+    must land on. This lets one bank statement file feed several
+    receivable accounts (e.g. tuition fees against Enrollment
+    Receivable, entrance fees against Admission Receivable) without
+    splitting the file per usage by hand.
     """
 
     _name = "customer_payment_import_type.account_mapping"
@@ -38,13 +39,14 @@ class CustomerPaymentImportTypeAccountMapping(models.Model):
         default=5,
         help="Display order of this mapping line within its import type.",
     )
-    usage_value = fields.Char(
-        string="Usage Value",
+    usage_id = fields.Many2one(
+        string="Usage",
+        comodel_name="res_partner_bank_usage",
         required=True,
+        ondelete="restrict",
         help=(
-            "Value expected in the Usage Column of the import file. "
-            "Matching is case-insensitive and ignores leading and "
-            "trailing spaces on both sides."
+            "Usage expected on the paying bank account (res.partner.bank "
+            "usage_id) for this line to apply."
         ),
     )
     allowed_account_ids = fields.Many2many(
@@ -63,24 +65,9 @@ class CustomerPaymentImportTypeAccountMapping(models.Model):
         domain="[('id', 'in', allowed_account_ids)]",
         help=(
             "Destination account used for every import file row whose "
-            "usage value matches this line."
+            "paying bank account usage matches this line."
         ),
     )
-
-    @api.model
-    def _normalize_usage_value(self, value):
-        """Return the comparable form of a usage value.
-
-        Both sides of a usage comparison go through this method, so
-        that the value read from the file and the value configured on
-        the mapping line are matched without regard to surrounding
-        whitespace or letter case.
-
-        :param value: raw usage value, of any type
-        :return: ``str`` stripped and case-folded; ``""`` when
-            ``value`` is empty or ``False``
-        """
-        return str(value or "").strip().casefold()
 
     @api.depends("type_id")
     def _compute_allowed_account_ids(self):
@@ -105,46 +92,36 @@ class CustomerPaymentImportTypeAccountMapping(models.Model):
                 )
             record.allowed_account_ids = result
 
-    @api.constrains("type_id", "usage_value")
-    def _check_duplicate_usage_value(self):
+    @api.constrains("type_id", "usage_id")
+    def _check_duplicate_usage(self):
         """Reject two mapping lines sharing one usage on a Type.
 
-        Uniqueness is enforced on the normalized form (stripped and
-        case-folded), because that is the form used when resolving a
-        file row -- two lines differing only by case or padding would
-        otherwise make the resolution order decide the account.
-
         Raises ``ValidationError`` when
-        ``_check_duplicate_usage_value_condition`` fails.
+        ``_check_duplicate_usage_condition`` fails.
         """
         for record in self:
-            if not record._check_duplicate_usage_value_condition():
+            if not record._check_duplicate_usage_condition():
                 error_message = (
                     _(
                         """
 Context: Saving customer payment import type account mapping
 Type: %s
-Problem: Usage value '%s' is already mapped on this type
-Solution: Remove the duplicate mapping line, or change its usage value
-          (matching ignores letter case and surrounding spaces)"""
+Problem: Usage '%s' is already mapped on this type
+Solution: Remove the duplicate mapping line, or change its usage"""
                     )
                     % (
                         record.type_id.display_name,
-                        record.usage_value,
+                        record.usage_id.display_name,
                     )
                 )
                 raise ValidationError(error_message)
 
-    def _check_duplicate_usage_value_condition(self):
+    def _check_duplicate_usage_condition(self):
         """Return whether this line's usage is unique on its Type.
 
         :return: ``True`` when no sibling mapping line of the same Type
-            normalizes to the same usage value
+            shares the same ``usage_id``
         """
         self.ensure_one()
-        normalized = self._normalize_usage_value(self.usage_value)
         siblings = self.type_id.account_mapping_ids - self
-        for sibling in siblings:
-            if self._normalize_usage_value(sibling.usage_value) == normalized:
-                return False
-        return True
+        return self.usage_id not in siblings.mapped("usage_id")

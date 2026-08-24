@@ -4,7 +4,7 @@
 
 {
     "name": "Customer Payment Import",
-    "version": "14.0.1.9.0",
+    "version": "14.0.1.10.0",
     "website": "https://simetri-sinergi.id",
     "author": "OpenSynergy Indonesia, PT. Simetri Sinergi Indonesia",
     "contributors": [
@@ -22,6 +22,7 @@
         "ssi_transaction_confirm_mixin",
         "ssi_transaction_queue_done_mixin",
         "ssi_transaction_queue_cancel_mixin",
+        "ssi_partner",
         "queue_job_batch",
         "base_automation",
         "web_tour",

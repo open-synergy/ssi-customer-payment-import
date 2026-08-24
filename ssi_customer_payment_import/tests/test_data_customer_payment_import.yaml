@@ -2953,6 +2953,22 @@ scenarios:
           user_type_id: "REF: account.data_account_type_receivable"
           reconcile: true
 
+      - step: "Create the Uang Sekolah bank account usage"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_school"
+        values:
+          name: "Uang Sekolah - Per Usage"
+          code: "USGU01"
+
+      - step: "Create the Uang Pangkal bank account usage"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_entrance"
+        values:
+          name: "Uang Pangkal - Per Usage"
+          code: "USGU02"
+
       - step: "Create partner"
         action: "create"
         model: "res.partner"
@@ -2961,13 +2977,23 @@ scenarios:
           name: "Per Usage Mapping Partner"
           is_company: true
 
-      - step: "Create partner bank account"
+      - step: "Create partner bank account tagged with the Uang Sekolah usage"
         action: "create"
         model: "res.partner.bank"
-        save_as: "partner_bank"
+        save_as: "partner_bank_school"
         values:
           acc_number: "8100000001"
           partner_id: "REC: partner.id"
+          usage_id: "REC: usage_school.id"
+
+      - step: "Create a second partner bank account tagged with the Uang Pangkal usage"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank_entrance"
+        values:
+          acc_number: "8100000006"
+          partner_id: "REC: partner.id"
+          usage_id: "REC: usage_entrance.id"
 
       - step: "Create bank journal"
         action: "create"
@@ -2977,7 +3003,7 @@ scenarios:
           name: "Test Bank Journal Per Usage"
           type: "bank"
 
-      - step: "Create type with a usage column and two mapped usages"
+      - step: "Create type with two mapped usages"
         action: "create"
         model: "customer_payment_import_type"
         save_as: "ctype"
@@ -2988,17 +3014,16 @@ scenarios:
           partner_bank_account_column: "account_number"
           amount_column: "amount"
           communication_column: "description"
-          usage_column: "usage"
           account_mapping_ids:
             - - 0
               - 0
               - sequence: 10
-                usage_value: "Uang Sekolah"
+                usage_id: "REC: usage_school.id"
                 account_id: "REC: account_enrollment.id"
             - - 0
               - 0
               - sequence: 20
-                usage_value: "Uang Pangkal"
+                usage_id: "REC: usage_entrance.id"
                 account_id: "REC: account_admission.id"
 
       - step: "Create import document without any header account"
@@ -3009,7 +3034,7 @@ scenarios:
           type_id: "REC: ctype.id"
           journal_id: "REC: journal.id"
 
-      - step: "Create the Uang Sekolah row"
+      - step: "Create the row paid from the Uang Sekolah bank account"
         action: "create"
         model: "customer_payment_import.data"
         save_as: "line_school"
@@ -3018,9 +3043,9 @@ scenarios:
           sequence: 1
           data:
             '{"date": "2026-07-01", "account_number": "8100000001", "amount": "150000",
-            "description": "SPP Juli", "usage": "Uang Sekolah"}'
+            "description": "SPP Juli"}'
 
-      - step: "Create the Uang Pangkal row"
+      - step: "Create the row paid from the Uang Pangkal bank account"
         action: "create"
         model: "customer_payment_import.data"
         save_as: "line_entrance"
@@ -3028,8 +3053,8 @@ scenarios:
           import_id: "REC: import_doc.id"
           sequence: 2
           data:
-            '{"date": "2026-07-02", "account_number": "8100000001", "amount": "275000",
-            "description": "Uang Pangkal 2026", "usage": "Uang Pangkal"}'
+            '{"date": "2026-07-02", "account_number": "8100000006", "amount": "275000",
+            "description": "Uang Pangkal 2026"}'
 
       - step: "Confirm import"
         action: "call"
@@ -3096,104 +3121,15 @@ scenarios:
             expected: "REC: account_admission.id"
 
   - name:
-      "Customer Payment Import - Usage matching ignores letter case and padding spaces"
-    steps:
-      - step: "Create the Enrollment receivable account"
-        action: "create"
-        model: "account.account"
-        save_as: "account_enrollment"
-        values:
-          name: "Piutang Enrollment - Normalized Usage"
-          code: "USGAR03"
-          user_type_id: "REF: account.data_account_type_receivable"
-          reconcile: true
-
-      - step: "Create partner"
-        action: "create"
-        model: "res.partner"
-        save_as: "partner"
-        values:
-          name: "Normalized Usage Partner"
-          is_company: true
-
-      - step: "Create partner bank account"
-        action: "create"
-        model: "res.partner.bank"
-        save_as: "partner_bank"
-        values:
-          acc_number: "8100000002"
-          partner_id: "REC: partner.id"
-
-      - step: "Create bank journal"
-        action: "create"
-        model: "account.journal"
-        save_as: "journal"
-        values:
-          name: "Test Bank Journal Normalized Usage"
-          type: "bank"
-
-      - step: "Create type mapping the Title Case usage value"
-        action: "create"
-        model: "customer_payment_import_type"
-        save_as: "ctype"
-        values:
-          name: "Normalized Usage Test Type"
-          code: "USGT002"
-          date_column: "date"
-          partner_bank_account_column: "account_number"
-          amount_column: "amount"
-          usage_column: "usage"
-          account_mapping_ids:
-            - - 0
-              - 0
-              - sequence: 10
-                usage_value: "Uang Sekolah"
-                account_id: "REC: account_enrollment.id"
-
-      - step: "Create import document"
-        action: "create"
-        model: "customer_payment_import"
-        save_as: "import_doc"
-        values:
-          type_id: "REC: ctype.id"
-          journal_id: "REC: journal.id"
-
-      - step: "Create a row whose usage is lowercased and padded with spaces"
-        action: "create"
-        model: "customer_payment_import.data"
-        save_as: "data_line"
-        values:
-          import_id: "REC: import_doc.id"
-          sequence: 1
-          data:
-            '{"date": "2026-07-03", "account_number": "8100000002", "amount": "125000",
-            "usage": " uang sekolah "}'
-
-      - step: "Process the row"
-        action: "call"
-        target: "data_line"
-        method: "_process_payment"
-
-      - step: "Assert the padded lowercase usage still matched the mapping"
-        action: "assert"
-        target: "data_line"
-        refresh: true
-        asserts:
-          state:
-            type: "value"
-            expected: "done"
-          payment_id.destination_account_id:
-            type: "m2o"
-            expected: "REC: account_enrollment.id"
-
-  - name: "Customer Payment Import - Unmapped usage falls back to the document account"
+      "Customer Payment Import - Bank account without a usage falls back to the document
+      account"
     steps:
       - step: "Create the mapped Enrollment receivable account"
         action: "create"
         model: "account.account"
         save_as: "account_enrollment"
         values:
-          name: "Piutang Enrollment - Fallback Header"
+          name: "Piutang Enrollment - No Usage"
           code: "USGAR04"
           user_type_id: "REF: account.data_account_type_receivable"
           reconcile: true
@@ -3203,20 +3139,28 @@ scenarios:
         model: "account.account"
         save_as: "account_header"
         values:
-          name: "Piutang Header - Fallback Header"
+          name: "Piutang Header - No Usage"
           code: "USGAR05"
           user_type_id: "REF: account.data_account_type_receivable"
           reconcile: true
+
+      - step: "Create the Uang Sekolah bank account usage"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_school"
+        values:
+          name: "Uang Sekolah - No Usage"
+          code: "USGU03"
 
       - step: "Create partner"
         action: "create"
         model: "res.partner"
         save_as: "partner"
         values:
-          name: "Fallback Header Account Partner"
+          name: "No Usage Bank Account Partner"
           is_company: true
 
-      - step: "Create partner bank account"
+      - step: "Create partner bank account without any usage configured"
         action: "create"
         model: "res.partner.bank"
         save_as: "partner_bank"
@@ -3229,25 +3173,24 @@ scenarios:
         model: "account.journal"
         save_as: "journal"
         values:
-          name: "Test Bank Journal Fallback Header"
+          name: "Test Bank Journal No Usage"
           type: "bank"
 
-      - step: "Create type mapping only one usage value"
+      - step: "Create type mapping one usage"
         action: "create"
         model: "customer_payment_import_type"
         save_as: "ctype"
         values:
-          name: "Fallback Header Account Test Type"
+          name: "No Usage Bank Account Test Type"
           code: "USGT003"
           date_column: "date"
           partner_bank_account_column: "account_number"
           amount_column: "amount"
-          usage_column: "usage"
           account_mapping_ids:
             - - 0
               - 0
               - sequence: 10
-                usage_value: "Uang Sekolah"
+                usage_id: "REC: usage_school.id"
                 account_id: "REC: account_enrollment.id"
 
       - step: "Create import document carrying a header account"
@@ -3259,7 +3202,7 @@ scenarios:
           journal_id: "REC: journal.id"
           account_id: "REC: account_header.id"
 
-      - step: "Create a row whose usage is not mapped"
+      - step: "Create a row paid from the usage-less bank account"
         action: "create"
         model: "customer_payment_import.data"
         save_as: "data_line"
@@ -3267,8 +3210,7 @@ scenarios:
           import_id: "REC: import_doc.id"
           sequence: 1
           data:
-            '{"date": "2026-07-04", "account_number": "8100000003", "amount": "90000",
-            "usage": "Uang Kegiatan"}'
+            '{"date": "2026-07-04", "account_number": "8100000003", "amount": "90000"}'
 
       - step: "Process the row"
         action: "call"
@@ -3288,70 +3230,97 @@ scenarios:
             expected: "REC: account_header.id"
 
   - name:
-      "Customer Payment Import - Unmapped usage without a document account falls back to
-      the partner receivable"
+      "Customer Payment Import - Unmapped bank account usage falls back to the document
+      account"
     steps:
       - step: "Create the mapped Enrollment receivable account"
         action: "create"
         model: "account.account"
         save_as: "account_enrollment"
         values:
-          name: "Piutang Enrollment - Fallback Partner"
+          name: "Piutang Enrollment - Unmapped Usage"
           code: "USGAR06"
           user_type_id: "REF: account.data_account_type_receivable"
           reconcile: true
+
+      - step: "Create the receivable account used on the document header"
+        action: "create"
+        model: "account.account"
+        save_as: "account_header"
+        values:
+          name: "Piutang Header - Unmapped Usage"
+          code: "USGAR07"
+          user_type_id: "REF: account.data_account_type_receivable"
+          reconcile: true
+
+      - step: "Create the mapped Uang Sekolah bank account usage"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_school"
+        values:
+          name: "Uang Sekolah - Unmapped Usage"
+          code: "USGU04"
+
+      - step: "Create the Uang Kegiatan bank account usage, left unmapped on the Type"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_activity"
+        values:
+          name: "Uang Kegiatan - Unmapped Usage"
+          code: "USGU05"
 
       - step: "Create partner"
         action: "create"
         model: "res.partner"
         save_as: "partner"
         values:
-          name: "Fallback Partner Receivable Partner"
+          name: "Unmapped Usage Bank Account Partner"
           is_company: true
 
-      - step: "Create partner bank account"
+      - step: "Create partner bank account tagged with the unmapped usage"
         action: "create"
         model: "res.partner.bank"
         save_as: "partner_bank"
         values:
           acc_number: "8100000004"
           partner_id: "REC: partner.id"
+          usage_id: "REC: usage_activity.id"
 
       - step: "Create bank journal"
         action: "create"
         model: "account.journal"
         save_as: "journal"
         values:
-          name: "Test Bank Journal Fallback Partner"
+          name: "Test Bank Journal Unmapped Usage"
           type: "bank"
 
-      - step: "Create type mapping only one usage value"
+      - step: "Create type mapping only the Uang Sekolah usage"
         action: "create"
         model: "customer_payment_import_type"
         save_as: "ctype"
         values:
-          name: "Fallback Partner Receivable Test Type"
+          name: "Unmapped Usage Test Type"
           code: "USGT004"
           date_column: "date"
           partner_bank_account_column: "account_number"
           amount_column: "amount"
-          usage_column: "usage"
           account_mapping_ids:
             - - 0
               - 0
               - sequence: 10
-                usage_value: "Uang Sekolah"
+                usage_id: "REC: usage_school.id"
                 account_id: "REC: account_enrollment.id"
 
-      - step: "Create import document without any header account"
+      - step: "Create import document carrying a header account"
         action: "create"
         model: "customer_payment_import"
         save_as: "import_doc"
         values:
           type_id: "REC: ctype.id"
           journal_id: "REC: journal.id"
+          account_id: "REC: account_header.id"
 
-      - step: "Create a row whose usage is not mapped"
+      - step: "Create a row paid from the bank account whose usage is not mapped"
         action: "create"
         model: "customer_payment_import.data"
         save_as: "data_line"
@@ -3359,15 +3328,14 @@ scenarios:
           import_id: "REC: import_doc.id"
           sequence: 1
           data:
-            '{"date": "2026-07-05", "account_number": "8100000004", "amount": "80000",
-            "usage": "Uang Kegiatan"}'
+            '{"date": "2026-07-05", "account_number": "8100000004", "amount": "80000"}'
 
       - step: "Process the row"
         action: "call"
         target: "data_line"
         method: "_process_payment"
 
-      - step: "Assert the payment used the partner's default receivable account"
+      - step: "Assert the row fell back to the header account"
         action: "assert"
         target: "data_line"
         refresh: true
@@ -3377,10 +3345,10 @@ scenarios:
             expected: "done"
           payment_id.destination_account_id:
             type: "m2o"
-            expected: "EVAL: registry['partner'].property_account_receivable_id.id"
+            expected: "REC: account_header.id"
 
   - name:
-      "Customer Payment Import - Type without a Usage Column keeps using the document
+      "Customer Payment Import - Type without any usage mapping keeps using the document
       account"
     steps:
       - step: "Create the receivable account used on the document header"
@@ -3388,41 +3356,50 @@ scenarios:
         model: "account.account"
         save_as: "account_header"
         values:
-          name: "Piutang Header - No Usage Column"
-          code: "USGAR07"
+          name: "Piutang Header - No Mapping"
+          code: "USGAR08"
           user_type_id: "REF: account.data_account_type_receivable"
           reconcile: true
+
+      - step: "Create a bank account usage, never referenced by any mapping line"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_school"
+        values:
+          name: "Uang Sekolah - No Mapping"
+          code: "USGU06"
 
       - step: "Create partner"
         action: "create"
         model: "res.partner"
         save_as: "partner"
         values:
-          name: "No Usage Column Partner"
+          name: "No Mapping Partner"
           is_company: true
 
-      - step: "Create partner bank account"
+      - step: "Create partner bank account carrying a usage nobody maps"
         action: "create"
         model: "res.partner.bank"
         save_as: "partner_bank"
         values:
           acc_number: "8100000005"
           partner_id: "REC: partner.id"
+          usage_id: "REC: usage_school.id"
 
       - step: "Create bank journal"
         action: "create"
         model: "account.journal"
         save_as: "journal"
         values:
-          name: "Test Bank Journal No Usage Column"
+          name: "Test Bank Journal No Mapping"
           type: "bank"
 
-      - step: "Create type without any usage column"
+      - step: "Create type without any usage mapping line"
         action: "create"
         model: "customer_payment_import_type"
         save_as: "ctype"
         values:
-          name: "No Usage Column Test Type"
+          name: "No Usage Mapping Test Type"
           code: "USGT005"
           date_column: "date"
           partner_bank_account_column: "account_number"
@@ -3437,7 +3414,7 @@ scenarios:
           journal_id: "REC: journal.id"
           account_id: "REC: account_header.id"
 
-      - step: "Create a row that even carries a usage value nobody reads"
+      - step: "Create a row whose bank account carries a usage nobody maps"
         action: "create"
         model: "customer_payment_import.data"
         save_as: "data_line"
@@ -3445,8 +3422,7 @@ scenarios:
           import_id: "REC: import_doc.id"
           sequence: 1
           data:
-            '{"date": "2026-07-06", "account_number": "8100000005", "amount": "70000",
-            "usage": "Uang Sekolah"}'
+            '{"date": "2026-07-06", "account_number": "8100000005", "amount": "70000"}'
 
       - step: "Process the row"
         action: "call"
@@ -3464,3 +3440,77 @@ scenarios:
           payment_id.destination_account_id:
             type: "m2o"
             expected: "REC: account_header.id"
+
+  - name:
+      "Customer Payment Import - Bank account without a usage and without a document
+      account falls back to the partner receivable"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Fallback Partner Receivable Partner"
+          is_company: true
+
+      - step: "Create partner bank account without any usage configured"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "8100000007"
+          partner_id: "REC: partner.id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Fallback Partner"
+          type: "bank"
+
+      - step: "Create type without any usage mapping line"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Fallback Partner Receivable Test Type"
+          code: "USGT006"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create import document without any header account"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create a row paid from the usage-less bank account"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-07-07", "account_number": "8100000007", "amount": "80000"}'
+
+      - step: "Process the row"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+
+      - step: "Assert the payment used the partner's default receivable account"
+        action: "assert"
+        target: "data_line"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          payment_id.destination_account_id:
+            type: "m2o"
+            expected: "EVAL: registry['partner'].property_account_receivable_id.id"
