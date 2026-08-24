@@ -126,6 +126,19 @@ msgid ""
 "\n"
 "Context: Saving customer payment import type\n"
 "Type: %s\n"
+"Problem: Partner Matching Method is 'Bank Account' but Partner Bank\n"
+"         Account Column is empty\n"
+"Solution: Fill in Partner Bank Account Column, or choose a different\n"
+"          Partner Matching Method"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: code:addons/ssi_customer_payment_import/models/customer_payment_import_type.py:0
+#, python-format
+msgid ""
+"\n"
+"Context: Saving customer payment import type\n"
+"Type: %s\n"
 "Problem: Usage Column is filled in but no Usage Account Mapping exists\n"
 "Solution: Add at least one Usage Account Mapping line, or clear the\n"
 "          Usage Column"
@@ -374,6 +387,11 @@ msgid "Auto Post"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__partner_matching_method__bank
+msgid "Bank Account"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:customer_payment_import_type,name:ssi_customer_payment_import.customer_payment_import_type_demo_1
 msgid "Bank Statement CSV"
 msgstr ""
@@ -495,7 +513,8 @@ msgstr ""
 msgid ""
 "Column name (or 0-based index if No Header Line is checked) containing the "
 "counterparty bank account number. Used to identify the paying customer by "
-"matching it against res.partner.bank."
+"matching it against res.partner.bank. Required only when Partner Matching "
+"Method = Bank Account."
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -1158,6 +1177,13 @@ msgid ""
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__partner_matching_method
+msgid ""
+"Method used to identify the paying customer from each row. Other modules can"
+" add more choices to this Selection through selection_add."
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__my_activity_date_deadline
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__my_activity_date_deadline
 msgid "My Activity Deadline"
@@ -1280,6 +1306,11 @@ msgstr ""
 #. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__partner_bank_account_column
 msgid "Partner Bank Account Column"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__partner_matching_method
+msgid "Partner Matching Method"
 msgstr ""
 
 #. module: ssi_customer_payment_import
