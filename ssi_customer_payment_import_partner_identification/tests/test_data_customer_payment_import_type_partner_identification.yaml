@@ -1,0 +1,53 @@
+scenarios:
+  - name:
+      "Customer Payment Import Type - Identification method requires column and category"
+    steps:
+      - step: "Create type with Identification method but no column/category"
+        action: "create"
+        model: "customer_payment_import_type"
+        values:
+          name: "Incomplete Identification Type"
+          code: "PIDT001"
+          date_column: "date"
+          amount_column: "amount"
+          partner_matching_method: "identification"
+        expect_error:
+          type: "ValidationError"
+          message_contains: "Partner Identification Column"
+
+  - name: "Customer Payment Import Type - Identification method accepts complete setup"
+    steps:
+      - step: "Create identification category"
+        action: "create"
+        model: "res.partner.id_category"
+        save_as: "category"
+        values:
+          code: "PIDT002CAT"
+          name: "Student Number Type Test"
+
+      - step: "Create type with complete Identification setup"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Complete Identification Type"
+          code: "PIDT002"
+          date_column: "date"
+          amount_column: "amount"
+          partner_matching_method: "identification"
+          partner_identification_column: "id_no"
+          partner_id_category_id: "REC: category.id"
+
+      - step: "Assert type saved with identification setup"
+        action: "assert"
+        target: "ctype"
+        asserts:
+          partner_matching_method:
+            type: "value"
+            expected: "identification"
+          partner_identification_column:
+            type: "value"
+            expected: "id_no"
+          partner_id_category_id:
+            type: "m2o"
+            expected: "REC: category"

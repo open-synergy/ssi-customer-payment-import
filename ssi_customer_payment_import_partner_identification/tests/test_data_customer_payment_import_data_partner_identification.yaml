@@ -1,0 +1,340 @@
+scenarios:
+  - name:
+      "Customer Payment Import Data - Partner Identification matches a single result"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Identification Match"
+          type: "bank"
+
+      - step: "Create identification category"
+        action: "create"
+        model: "res.partner.id_category"
+        save_as: "category"
+        values:
+          code: "PID101CAT"
+          name: "Student Number Match Test"
+
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Identification Match Partner"
+          is_company: true
+
+      - step: "Register identification number on the partner"
+        action: "create"
+        model: "res.partner.id_number"
+        save_as: "id_number"
+        values:
+          name: "PK-001"
+          category_id: "REC: category.id"
+          partner_id: "REC: partner.id"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Identification Match Test Type"
+          code: "PID101"
+          date_column: "date"
+          amount_column: "amount"
+          partner_matching_method: "identification"
+          partner_identification_column: "id_no"
+          partner_id_category_id: "REC: category.id"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create data line with matching identification value"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data: '{"date": "2026-04-01", "id_no": "PK-001", "amount": "100000"}'
+
+      - step: "Process the data line via the queue entry point"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+
+      - step: "Assert the line resolved to the matching partner"
+        action: "assert"
+        target: "data_line"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          payment_id:
+            type: "value"
+            operator: "is_truthy"
+          partner_id:
+            type: "m2o"
+            expected: "REC: partner"
+
+  - name:
+      "Customer Payment Import Data - Partner Identification matches a value containing
+      a dash"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Identification Dash"
+          type: "bank"
+
+      - step: "Create identification category"
+        action: "create"
+        model: "res.partner.id_category"
+        save_as: "category"
+        values:
+          code: "PID102CAT"
+          name: "Student Number Dash Test"
+
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Identification Dash Partner"
+          is_company: true
+
+      - step: "Register identification number containing a dash"
+        action: "create"
+        model: "res.partner.id_number"
+        save_as: "id_number"
+        values:
+          name: "PK-1786164942"
+          category_id: "REC: category.id"
+          partner_id: "REC: partner.id"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Identification Dash Test Type"
+          code: "PID102"
+          date_column: "date"
+          amount_column: "amount"
+          partner_matching_method: "identification"
+          partner_identification_column: "id_no"
+          partner_id_category_id: "REC: category.id"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create data line whose identification value contains a dash"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data: '{"date": "2026-04-01", "id_no": "PK-1786164942", "amount": "50000"}'
+
+      - step: "Process the data line via the queue entry point"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+
+      - step:
+          "Assert the dashed value still matched exactly (no sanitize_account_number
+          mangling)"
+        action: "assert"
+        target: "data_line"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          partner_id:
+            type: "m2o"
+            expected: "REC: partner"
+
+  - name:
+      "Customer Payment Import Data - Partner Identification raises when value is not
+      found"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Identification Not Found"
+          type: "bank"
+
+      - step: "Create identification category"
+        action: "create"
+        model: "res.partner.id_category"
+        save_as: "category"
+        values:
+          code: "PID103CAT"
+          name: "Student Number Not Found Test"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Identification Not Found Test Type"
+          code: "PID103"
+          date_column: "date"
+          amount_column: "amount"
+          partner_matching_method: "identification"
+          partner_identification_column: "id_no"
+          partner_id_category_id: "REC: category.id"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create data line with an unregistered identification value"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data: '{"date": "2026-04-01", "id_no": "NOTFOUND-001", "amount": "100000"}'
+
+      - step: "Process the data line via the queue entry point, expect it to raise"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+        expect_error:
+          type: "UserError"
+          message_contains: "No partner found with identification value"
+
+      - step: "Assert the line recorded the error"
+        action: "assert"
+        target: "data_line"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "error"
+
+  - name:
+      "Customer Payment Import Data - Partner Identification raises when the value is
+      ambiguous"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Identification Ambiguous"
+          type: "bank"
+
+      - step: "Create identification category"
+        action: "create"
+        model: "res.partner.id_category"
+        save_as: "category"
+        values:
+          code: "PID104CAT"
+          name: "Student Number Ambiguous Test"
+
+      - step: "Create first partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner_1"
+        values:
+          name: "Identification Ambiguous Partner One"
+          is_company: true
+
+      - step: "Create second partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner_2"
+        values:
+          name: "Identification Ambiguous Partner Two"
+          is_company: true
+
+      - step: "Register the same identification value on the first partner"
+        action: "create"
+        model: "res.partner.id_number"
+        save_as: "id_number_1"
+        values:
+          name: "DUP-001"
+          category_id: "REC: category.id"
+          partner_id: "REC: partner_1.id"
+
+      - step: "Register the same identification value on the second partner"
+        action: "create"
+        model: "res.partner.id_number"
+        save_as: "id_number_2"
+        values:
+          name: "DUP-001"
+          category_id: "REC: category.id"
+          partner_id: "REC: partner_2.id"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Identification Ambiguous Test Type"
+          code: "PID104"
+          date_column: "date"
+          amount_column: "amount"
+          partner_matching_method: "identification"
+          partner_identification_column: "id_no"
+          partner_id_category_id: "REC: category.id"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create data line with an ambiguous identification value"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data: '{"date": "2026-04-01", "id_no": "DUP-001", "amount": "100000"}'
+
+      - step: "Process the data line via the queue entry point, expect it to raise"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+        expect_error:
+          type: "UserError"
+          message_contains: "2 partners found with identification value"
+
+      - step: "Assert the line recorded the error"
+        action: "assert"
+        target: "data_line"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "error"
