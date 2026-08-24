@@ -61,6 +61,15 @@
                         <field name="date_format" />
                         <field name="partner_bank_account_column" />
                         <field name="amount_column" />
+                        <field name="amount_format" />
+                        <field
+                                name="amount_thousand_separator"
+                                attrs="{'invisible': [('amount_format', '!=', 'manual')]}"
+                            />
+                        <field
+                                name="amount_decimal_separator"
+                                attrs="{'invisible': [('amount_format', '!=', 'manual')]}"
+                            />
                         <field name="communication_column" />
                         <field name="unique_ref_column" />
                         <field name="usage_column" />

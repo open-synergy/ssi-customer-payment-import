@@ -1750,6 +1750,378 @@ scenarios:
           type: "ValidationError"
 
   - name:
+      "Customer Payment Import Data - Manual amount format (thousand dot, decimal none)
+      strips a currency prefix"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Test Import Customer Manual Amount 1"
+          is_company: true
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "9200000001"
+          partner_id: "REC: partner.id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Manual Amount 1"
+          type: "bank"
+
+      - step: "Create type with manual amount format (thousand dot, decimal none)"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Manual Amount Type - Dot Thousand"
+          code: "MAFT001"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          amount_format: "manual"
+          amount_thousand_separator: "dot"
+          amount_decimal_separator: "none"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create data line with a currency-prefixed amount"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-03-10", "account_number": "9200000001", "amount": "Rp
+            8.150.000"}'
+
+      - step: "Process the data line"
+        action: "call"
+        target: "data_line"
+        method: "_run_process_payment"
+
+      - step: "Assert the amount is parsed as a whole rupiah value"
+        action: "assert"
+        target: "data_line"
+        asserts:
+          amount:
+            type: "value"
+            expected: 8150000.0
+
+  - name:
+      "Customer Payment Import Data - Manual amount format (thousand none, decimal dot)
+      keeps the decimal part"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Test Import Customer Manual Amount 2"
+          is_company: true
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "9200000002"
+          partner_id: "REC: partner.id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Manual Amount 2"
+          type: "bank"
+
+      - step: "Create type with manual amount format (thousand none, decimal dot)"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Manual Amount Type - Dot Decimal"
+          code: "MAFT002"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          amount_format: "manual"
+          amount_thousand_separator: "none"
+          amount_decimal_separator: "dot"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create data line with a currency-prefixed decimal amount"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-03-11", "account_number": "9200000002", "amount": "IDR
+            795000.25"}'
+
+      - step: "Process the data line"
+        action: "call"
+        target: "data_line"
+        method: "_run_process_payment"
+
+      - step: "Assert the amount keeps its decimal part"
+        action: "assert"
+        target: "data_line"
+        asserts:
+          amount:
+            type: "value"
+            expected: 795000.25
+
+  - name:
+      "Customer Payment Import Data - Manual amount format (thousand dot, decimal comma)
+      parses both separators"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Test Import Customer Manual Amount 3"
+          is_company: true
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "9200000003"
+          partner_id: "REC: partner.id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Manual Amount 3"
+          type: "bank"
+
+      - step: "Create type with manual amount format (thousand dot, decimal comma)"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Manual Amount Type - Dot Thousand Comma Decimal"
+          code: "MAFT003"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          amount_format: "manual"
+          amount_thousand_separator: "dot"
+          amount_decimal_separator: "comma"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create data line with both separators present"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-03-12", "account_number": "9200000003", "amount":
+            "1.450.000,50"}'
+
+      - step: "Process the data line"
+        action: "call"
+        target: "data_line"
+        method: "_run_process_payment"
+
+      - step: "Assert the amount is parsed correctly"
+        action: "assert"
+        target: "data_line"
+        asserts:
+          amount:
+            type: "value"
+            expected: 1450000.5
+
+  - name:
+      "Customer Payment Import Data - Auto amount format keeps guessing separators by
+      position"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Test Import Customer Manual Amount 4"
+          is_company: true
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "9200000004"
+          partner_id: "REC: partner.id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Manual Amount 4"
+          type: "bank"
+
+      - step: "Create type with the default (auto) amount format"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Auto Amount Type - Regression Guard"
+          code: "MAFT004"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Assert amount_format defaults to auto"
+        action: "assert"
+        target: "ctype"
+        asserts:
+          amount_format:
+            type: "value"
+            expected: "auto"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create data line with the pre-existing dot-decimal notation"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-03-13", "account_number": "9200000004", "amount":
+            "795,000.00"}'
+
+      - step: "Process the data line"
+        action: "call"
+        target: "data_line"
+        method: "_run_process_payment"
+
+      - step: "Assert the amount matches the pre-existing heuristic"
+        action: "assert"
+        target: "data_line"
+        asserts:
+          amount:
+            type: "value"
+            expected: 795000.0
+
+  - name:
+      "Customer Payment Import Data - Manual amount format raises when the value still
+      does not parse"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Test Import Customer Manual Amount 5"
+          is_company: true
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "9200000005"
+          partner_id: "REC: partner.id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Manual Amount 5"
+          type: "bank"
+
+      - step: "Create type with manual amount format (thousand comma, decimal dot)"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Manual Amount Type - Mismatched Value"
+          code: "MAFT005"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          amount_format: "manual"
+          amount_thousand_separator: "comma"
+          amount_decimal_separator: "dot"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step:
+          "Create data line whose value uses the dot-thousand notation, not the
+          configured comma"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-03-14", "account_number": "9200000005", "amount":
+            "8.150.000"}'
+
+      - step: "Processing raises, mentioning the configured Amount Format"
+        action: "call"
+        target: "data_line"
+        method: "_run_process_payment"
+        expect_error:
+          type: "UserError"
+          message_contains: "Amount Format"
+
+  - name:
       "Customer Payment Import Data - _run_process_payment raises on unknown bank
       account"
     steps:

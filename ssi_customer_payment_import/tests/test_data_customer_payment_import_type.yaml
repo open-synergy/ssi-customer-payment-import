@@ -310,6 +310,27 @@ scenarios:
           type: "ValidationError"
 
   - name:
+      "Customer Payment Import Type - Manual amount format with equal thousand and
+      decimal separators is rejected"
+    steps:
+      - step:
+          "Creating a manual amount format type whose thousand and decimal separators
+          are both dot is rejected"
+        action: "create"
+        model: "customer_payment_import_type"
+        values:
+          name: "Amount Separator Conflict Test Type"
+          code: "AMFT001"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          amount_format: "manual"
+          amount_thousand_separator: "dot"
+          amount_decimal_separator: "dot"
+        expect_error:
+          type: "ValidationError"
+
+  - name:
       "Customer Payment Import Type - Usage Column without any mapping line is rejected"
     steps:
       - step: "Creating a type with a usage column but no mapping line is rejected"
