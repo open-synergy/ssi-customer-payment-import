@@ -133,27 +133,14 @@ msgid ""
 msgstr ""
 
 #. module: ssi_customer_payment_import
-#: code:addons/ssi_customer_payment_import/models/customer_payment_import_type.py:0
-#, python-format
-msgid ""
-"\n"
-"Context: Saving customer payment import type\n"
-"Type: %s\n"
-"Problem: Usage Column is filled in but no Usage Account Mapping exists\n"
-"Solution: Add at least one Usage Account Mapping line, or clear the\n"
-"          Usage Column"
-msgstr ""
-
-#. module: ssi_customer_payment_import
 #: code:addons/ssi_customer_payment_import/models/customer_payment_import_type_account_mapping.py:0
 #, python-format
 msgid ""
 "\n"
 "Context: Saving customer payment import type account mapping\n"
 "Type: %s\n"
-"Problem: Usage value '%s' is already mapped on this type\n"
-"Solution: Remove the duplicate mapping line, or change its usage value\n"
-"          (matching ignores letter case and surrounding spaces)"
+"Problem: Usage '%s' is already mapped on this type\n"
+"Solution: Remove the duplicate mapping line, or change its usage"
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -539,16 +526,6 @@ msgid ""
 msgstr ""
 
 #. module: ssi_customer_payment_import
-#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__usage_column
-msgid ""
-"Column name (or 0-based index if No Header Line is checked) containing the "
-"usage of each row. When filled in, the destination account of every "
-"resulting customer payment is resolved per row through the Usage Account "
-"Mapping below. Leave empty to keep using the Account of the import document "
-"for every row."
-msgstr ""
-
-#. module: ssi_customer_payment_import
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__exclude_column
 msgid ""
 "Column name (or 0-based index if No Header Line is checked) used to "
@@ -746,8 +723,8 @@ msgstr ""
 #. module: ssi_customer_payment_import
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__account_id
 msgid ""
-"Destination account used for every import file row whose usage value matches"
-" this line."
+"Destination account used for every import file row whose paying bank account"
+" usage matches this line."
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -1694,6 +1671,11 @@ msgid "Unread Messages Counter"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__usage_id
+msgid "Usage"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.customer_payment_import_type_view_form
 msgid "Usage Account Mapping"
 msgstr ""
@@ -1704,21 +1686,10 @@ msgid "Usage Account Mappings"
 msgstr ""
 
 #. module: ssi_customer_payment_import
-#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__usage_column
-#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__usage_column
-msgid "Usage Column"
-msgstr ""
-
-#. module: ssi_customer_payment_import
-#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import__usage_column
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__usage_id
 msgid ""
-"Usage Column configured on the Type. Only used by the form view, to hide the"
-" document Account when the destination account is resolved per row instead."
-msgstr ""
-
-#. module: ssi_customer_payment_import
-#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__usage_value
-msgid "Usage Value"
+"Usage expected on the paying bank account (res.partner.bank usage_id) for "
+"this line to apply."
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -1752,13 +1723,6 @@ msgstr ""
 #. module: ssi_customer_payment_import
 #: model:res.groups,name:ssi_customer_payment_import.customer_payment_import_validator_group
 msgid "Validator"
-msgstr ""
-
-#. module: ssi_customer_payment_import
-#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type_account_mapping__usage_value
-msgid ""
-"Value expected in the Usage Column of the import file. Matching is case-"
-"insensitive and ignores leading and trailing spaces on both sides."
 msgstr ""
 
 #. module: ssi_customer_payment_import
