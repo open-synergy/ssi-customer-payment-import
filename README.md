@@ -20,6 +20,7 @@ addon | version | maintainers | summary
 --- | --- | --- | ---
 [ssi_customer_payment_import](ssi_customer_payment_import/) | 14.0.1.9.0 |  | Customer Payment Import
 [ssi_customer_payment_import_operating_unit](ssi_customer_payment_import_operating_unit/) | 14.0.1.1.1 |  | Customer Payment Import - Operating Unit Integration
+[ssi_customer_payment_import_partner_identification](ssi_customer_payment_import_partner_identification/) | 14.0.1.0.0 |  | Customer Payment Import - Partner Identification Matching
 
 [//]: # (end addons)
 

@@ -10,6 +10,7 @@ setuptools.setup(
     install_requires=[
         'odoo14-addon-ssi_customer_payment_import',
         'odoo14-addon-ssi_customer_payment_import_operating_unit',
+        'odoo14-addon-ssi_customer_payment_import_partner_identification',
     ],
     classifiers=[
         'Programming Language :: Python',
