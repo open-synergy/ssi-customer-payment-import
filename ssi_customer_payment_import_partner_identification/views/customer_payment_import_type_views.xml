@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 OpenSynergy Indonesia
+     Copyright 2026 PT. Simetri Sinergi Indonesia
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo>
+
+<record id="customer_payment_import_type_view_form" model="ir.ui.view">
+    <field name="name">customer_payment_import_type: Partner Identification Form</field>
+    <field name="model">customer_payment_import_type</field>
+    <field
+            name="inherit_id"
+            ref="ssi_customer_payment_import.customer_payment_import_type_view_form"
+        />
+    <field name="priority" eval="30" />
+    <field name="arch" type="xml">
+        <data>
+            <xpath expr="//field[@name='partner_matching_method']" position="after">
+                <field
+                        name="partner_identification_column"
+                        attrs="{'invisible': [('partner_matching_method', '!=', 'identification')]}"
+                    />
+                <field
+                        name="partner_id_category_id"
+                        attrs="{'invisible': [('partner_matching_method', '!=', 'identification')]}"
+                    />
+            </xpath>
+        </data>
+    </field>
+</record>
+
+</odoo>
