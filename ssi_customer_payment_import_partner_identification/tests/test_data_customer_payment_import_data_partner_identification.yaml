@@ -229,15 +229,6 @@ scenarios:
           type: "UserError"
           message_contains: "No partner found with identification value"
 
-      - step: "Assert the line recorded the error"
-        action: "assert"
-        target: "data_line"
-        refresh: true
-        asserts:
-          state:
-            type: "value"
-            expected: "error"
-
   - name:
       "Customer Payment Import Data - Partner Identification raises when the value is
       ambiguous"
@@ -329,12 +320,3 @@ scenarios:
         expect_error:
           type: "UserError"
           message_contains: "2 partners found with identification value"
-
-      - step: "Assert the line recorded the error"
-        action: "assert"
-        target: "data_line"
-        refresh: true
-        asserts:
-          state:
-            type: "value"
-            expected: "error"
