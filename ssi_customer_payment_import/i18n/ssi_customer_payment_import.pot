@@ -64,8 +64,11 @@ msgid ""
 "\n"
 "Context: Processing customer payment import data line\n"
 "Document: %s (sequence %s)\n"
-"Problem: Could not parse amount value '%s'\n"
-"Solution: Correct the data in this line, then retry the queue job"
+"Problem: Could not parse amount value '%s' under Amount Format '%s'\n"
+"         (Amount Thousand Separator '%s', Amount Decimal Separator\n"
+"         '%s')\n"
+"Solution: Correct the data in this line, or adjust the amount format\n"
+"          settings on the import Type, then retry the queue job"
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -101,6 +104,19 @@ msgid ""
 "Document: %s (sequence %s)\n"
 "Problem: This line is in state '%s' and cannot be retried\n"
 "Solution: Only lines in Draft or Error state can be retried"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: code:addons/ssi_customer_payment_import/models/customer_payment_import_type.py:0
+#, python-format
+msgid ""
+"\n"
+"Context: Saving customer payment import type\n"
+"Type: %s\n"
+"Problem: Amount Thousand Separator and Amount Decimal Separator are\n"
+"         both set to '%s'\n"
+"Solution: Configure two different separators, or set the unused one\n"
+"          to 'none'"
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -294,6 +310,21 @@ msgid "Amount Column"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__amount_decimal_separator
+msgid "Amount Decimal Separator"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__amount_format
+msgid "Amount Format"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__amount_thousand_separator
+msgid "Amount Thousand Separator"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_data__amount
 msgid "Amount of the linked payment record."
 msgstr ""
@@ -330,6 +361,11 @@ msgstr ""
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__message_attachment_count
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__message_attachment_count
 msgid "Attachment Count"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__amount_format__auto
+msgid "Auto (guess separators)"
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -677,6 +713,13 @@ msgid "Date of this import document."
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__amount_decimal_separator
+msgid ""
+"Decimal separator used in the Amount Column value. Only applied when Amount "
+"Format = Manual."
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__delimiter
 msgid "Delimiter"
 msgstr ""
@@ -841,6 +884,16 @@ msgstr ""
 #. module: ssi_customer_payment_import
 #: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.customer_payment_import_view_search
 msgid "Group By"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__amount_format
+msgid ""
+"How the Amount Column value is turned into a number. Auto guesses the "
+"thousand/decimal separators from their relative position in the text, "
+"exactly as before this field existed. Manual applies Amount Thousand "
+"Separator and Amount Decimal Separator below, and also strips any other "
+"character (e.g. a currency prefix such as 'Rp' or 'IDR')."
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -1027,6 +1080,11 @@ msgstr ""
 #: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__account_selection_method__manual
 #: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__journal_selection_method__manual
 msgid "Manual"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__amount_format__manual
+msgid "Manual (explicit separators)"
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -1496,6 +1554,13 @@ msgid "This Month"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__amount_thousand_separator
+msgid ""
+"Thousand separator used in the Amount Column value. Only applied when Amount"
+" Format = Manual."
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__cancel_queue_job_batch_id
 msgid "To Cancel Queue Job Batch"
 msgstr ""
@@ -1698,8 +1763,26 @@ msgid "XLSX"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__amount_decimal_separator__comma
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__amount_thousand_separator__comma
 #: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__delimiter__comma
 msgid "comma (,)"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__amount_decimal_separator__dot
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__amount_thousand_separator__dot
+msgid "dot (.)"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__amount_thousand_separator__none
+msgid "none"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__amount_decimal_separator__none
+msgid "none (integer amount)"
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -1713,6 +1796,7 @@ msgid "semicolon (;)"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__amount_thousand_separator__space
 #: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__delimiter__space
 msgid "space"
 msgstr ""
