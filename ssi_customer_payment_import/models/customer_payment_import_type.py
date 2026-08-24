@@ -122,6 +122,50 @@ class CustomerPaymentImportType(models.Model):
             "containing the payment amount."
         ),
     )
+    amount_format = fields.Selection(
+        string="Amount Format",
+        selection=[
+            ("auto", "Auto (guess separators)"),
+            ("manual", "Manual (explicit separators)"),
+        ],
+        required=True,
+        default="auto",
+        help=(
+            "How the Amount Column value is turned into a number. Auto "
+            "guesses the thousand/decimal separators from their relative "
+            "position in the text, exactly as before this field existed. "
+            "Manual applies Amount Thousand Separator and Amount Decimal "
+            "Separator below, and also strips any other character (e.g. "
+            "a currency prefix such as 'Rp' or 'IDR')."
+        ),
+    )
+    amount_thousand_separator = fields.Selection(
+        string="Amount Thousand Separator",
+        selection=[
+            ("none", "none"),
+            ("dot", "dot (.)"),
+            ("comma", "comma (,)"),
+            ("space", "space"),
+        ],
+        default="none",
+        help=(
+            "Thousand separator used in the Amount Column value. Only "
+            "applied when Amount Format = Manual."
+        ),
+    )
+    amount_decimal_separator = fields.Selection(
+        string="Amount Decimal Separator",
+        selection=[
+            ("none", "none (integer amount)"),
+            ("dot", "dot (.)"),
+            ("comma", "comma (,)"),
+        ],
+        default="dot",
+        help=(
+            "Decimal separator used in the Amount Column value. Only "
+            "applied when Amount Format = Manual."
+        ),
+    )
     communication_column = fields.Char(
         string="Communication Column",
         help=(
@@ -346,6 +390,110 @@ Solution: Add at least one Usage Account Mapping line, or clear the
         if not self.usage_column:
             return True
         return bool(self.account_mapping_ids)
+
+    @api.constrains(
+        "amount_format", "amount_thousand_separator", "amount_decimal_separator"
+    )
+    def _check_amount_separator_conflict(self):
+        """Reject a Manual amount format whose two separators collide.
+
+        A Manual amount format where Amount Thousand Separator and
+        Amount Decimal Separator are set to the same character makes
+        it impossible to tell one apart from the other while
+        normalizing a value, so the configuration itself is
+        ambiguous regardless of the data being imported.
+
+        Raises ``ValidationError`` when
+        ``_check_amount_separator_conflict_condition`` fails.
+        """
+        for record in self:
+            if not record._check_amount_separator_conflict_condition():
+                error_message = (
+                    _(
+                        """
+Context: Saving customer payment import type
+Type: %s
+Problem: Amount Thousand Separator and Amount Decimal Separator are
+         both set to '%s'
+Solution: Configure two different separators, or set the unused one
+          to 'none'"""
+                    )
+                    % (record.display_name, record.amount_thousand_separator)
+                )
+                raise ValidationError(error_message)
+
+    def _check_amount_separator_conflict_condition(self):
+        """Return whether this Type's amount separator setup is
+        self-consistent.
+
+        :return: ``False`` when ``amount_format`` is ``"manual"`` and
+            ``amount_thousand_separator`` equals
+            ``amount_decimal_separator``; ``True`` otherwise
+        """
+        self.ensure_one()
+        if self.amount_format != "manual":
+            return True
+        return self.amount_thousand_separator != self.amount_decimal_separator
+
+    def _normalize_amount_text(self, value):
+        """Normalize a raw amount cell value into a string ``float()``
+        can parse.
+
+        When ``amount_format`` is ``"manual"``: every character that
+        is not a digit, this Type's configured thousand/decimal
+        separator, or a leading ``-`` sign is dropped first (this is
+        what removes currency prefixes such as ``Rp``/``IDR`` and
+        stray spaces); the thousand separator is then dropped, and
+        the decimal separator is turned into ``.``. When
+        ``amount_format`` is ``"auto"``, the historical heuristic
+        that guesses the separators from their relative position is
+        applied unchanged.
+
+        :param value: raw amount cell value (usually a ``str``, but a
+            falsy value is tolerated)
+        :return: ``str`` ready to be converted with ``float()``
+        """
+        self.ensure_one()
+        text = str(value or "").strip()
+
+        if self.amount_format != "manual":
+            text = text.replace(" ", "")
+            if "," in text and "." in text:
+                if text.rfind(",") > text.rfind("."):
+                    text = text.replace(".", "").replace(",", ".")
+                else:
+                    text = text.replace(",", "")
+            elif "," in text:
+                text = text.replace(",", ".")
+            return text
+
+        separator_character = {
+            "none": "",
+            "dot": ".",
+            "comma": ",",
+            "space": " ",
+        }
+        thousand_character = separator_character[self.amount_thousand_separator]
+        decimal_character = separator_character[self.amount_decimal_separator]
+
+        allowed_characters = set("0123456789")
+        if thousand_character:
+            allowed_characters.add(thousand_character)
+        if decimal_character:
+            allowed_characters.add(decimal_character)
+
+        sign = "-" if text.startswith("-") else ""
+        digits_and_separators = "".join(
+            character for character in text if character in allowed_characters
+        )
+        text = sign + digits_and_separators
+
+        if thousand_character:
+            text = text.replace(thousand_character, "")
+        if decimal_character:
+            text = text.replace(decimal_character, ".")
+
+        return text
 
     def _get_column_delimiter_character(self):
         """Translate the ``delimiter`` selection into its CSV character.

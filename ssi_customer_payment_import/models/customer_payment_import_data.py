@@ -145,19 +145,22 @@ class CustomerPaymentImportData(models.Model):  # pylint: disable=too-few-public
 
     def _parse_amount(self, value):
         """Parse ``value`` (number or string, possibly with thousands/decimal
-        separators) into a float. Raise UserError if it cannot be parsed."""
+        separators) into a float. Raise UserError if it cannot be parsed.
+
+        A numeric ``value`` (``int``/``float``, as read from an XLSX
+        cell) is returned as-is and never goes through the import
+        Type's amount format normalization. A string ``value`` is
+        first normalized by the import Type's
+        ``_normalize_amount_text`` -- which applies the configured
+        Amount Format (``auto``/``manual``) and separators -- before
+        being converted with ``float()``.
+        """
         self.ensure_one()
         if isinstance(value, (int, float)):
             return float(value)
 
-        text = str(value or "").strip().replace(" ", "")
-        if "," in text and "." in text:
-            if text.rfind(",") > text.rfind("."):
-                text = text.replace(".", "").replace(",", ".")
-            else:
-                text = text.replace(",", "")
-        elif "," in text:
-            text = text.replace(",", ".")
+        ctype = self._get_type()
+        text = ctype._normalize_amount_text(value)
 
         try:
             return float(text)
@@ -167,10 +170,20 @@ class CustomerPaymentImportData(models.Model):  # pylint: disable=too-few-public
                     """
 Context: Processing customer payment import data line
 Document: %s (sequence %s)
-Problem: Could not parse amount value '%s'
-Solution: Correct the data in this line, then retry the queue job"""
+Problem: Could not parse amount value '%s' under Amount Format '%s'
+         (Amount Thousand Separator '%s', Amount Decimal Separator
+         '%s')
+Solution: Correct the data in this line, or adjust the amount format
+          settings on the import Type, then retry the queue job"""
                 )
-                % (self.import_id.name or str(self.import_id.id), self.sequence, value)
+                % (
+                    self.import_id.name or str(self.import_id.id),
+                    self.sequence,
+                    value,
+                    ctype.amount_format,
+                    ctype.amount_thousand_separator,
+                    ctype.amount_decimal_separator,
+                )
             ) from error
 
     def _parse_date(self, value, date_format):
