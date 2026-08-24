@@ -34,6 +34,9 @@ scenarios:
           account_selection_method:
             type: "value"
             expected: "domain"
+          partner_matching_method:
+            type: "value"
+            expected: "bank"
 
   - name: "Edit Customer Payment Import Type Name"
     steps:
@@ -343,5 +346,23 @@ scenarios:
           partner_bank_account_column: "account_number"
           amount_column: "amount"
           usage_column: "usage"
+        expect_error:
+          type: "ValidationError"
+
+  - name:
+      "Customer Payment Import Type - Bank matching method without its source column is
+      rejected"
+    steps:
+      - step:
+          "Creating a type with Partner Matching Method = Bank Account and an empty
+          Partner Bank Account Column is rejected"
+        action: "create"
+        model: "customer_payment_import_type"
+        values:
+          name: "Partner Matching Without Column Test Type"
+          code: "PMWC001"
+          date_column: "date"
+          amount_column: "amount"
+          partner_matching_method: "bank"
         expect_error:
           type: "ValidationError"

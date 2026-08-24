@@ -105,13 +105,26 @@ class CustomerPaymentImportType(models.Model):
         default="%Y-%m-%d",
         help="Python strptime format string used to parse the Date Column value.",
     )
+    partner_matching_method = fields.Selection(
+        string="Partner Matching Method",
+        selection=[
+            ("bank", "Bank Account"),
+        ],
+        required=True,
+        default="bank",
+        help=(
+            "Method used to identify the paying customer from each row. "
+            "Other modules can add more choices to this Selection through "
+            "selection_add."
+        ),
+    )
     partner_bank_account_column = fields.Char(
         string="Partner Bank Account Column",
-        required=True,
         help=(
             "Column name (or 0-based index if No Header Line is checked) "
             "containing the counterparty bank account number. Used to identify "
-            "the paying customer by matching it against res.partner.bank."
+            "the paying customer by matching it against res.partner.bank. "
+            "Required only when Partner Matching Method = Bank Account."
         ),
     )
     amount_column = fields.Char(
@@ -434,6 +447,48 @@ Solution: Configure two different separators, or set the unused one
         if self.amount_format != "manual":
             return True
         return self.amount_thousand_separator != self.amount_decimal_separator
+
+    @api.constrains("partner_matching_method", "partner_bank_account_column")
+    def _check_partner_matching_method(self):
+        """Reject a Bank Account matching method without its source
+        column.
+
+        Raises ``ValidationError`` when
+        ``_check_partner_matching_method_condition`` fails.
+        """
+        for record in self:
+            if not record._check_partner_matching_method_condition():
+                error_message = (
+                    _(
+                        """
+Context: Saving customer payment import type
+Type: %s
+Problem: Partner Matching Method is 'Bank Account' but Partner Bank
+         Account Column is empty
+Solution: Fill in Partner Bank Account Column, or choose a different
+          Partner Matching Method"""
+                    )
+                    % (record.display_name,)
+                )
+                raise ValidationError(error_message)
+
+    def _check_partner_matching_method_condition(self):
+        """Return whether this Type's partner matching setup is
+        complete.
+
+        Written as an if/elif dispatcher per ``partner_matching_method``
+        value, so a module adding another value through
+        ``selection_add`` extends this with its own ``elif`` branch in
+        an override, instead of editing the ``"bank"`` branch below.
+
+        :return: ``False`` when ``partner_matching_method`` is
+            ``"bank"`` and ``partner_bank_account_column`` is empty;
+            ``True`` otherwise
+        """
+        self.ensure_one()
+        if self.partner_matching_method == "bank":
+            return bool(self.partner_bank_account_column)
+        return True
 
     def _normalize_amount_text(self, value):
         """Normalize a raw amount cell value into a string ``float()``

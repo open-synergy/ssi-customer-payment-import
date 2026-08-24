@@ -59,7 +59,11 @@
                     <group name="column_mapping_1" colspan="4" col="2">
                         <field name="date_column" />
                         <field name="date_format" />
-                        <field name="partner_bank_account_column" />
+                        <field name="partner_matching_method" />
+                        <field
+                                name="partner_bank_account_column"
+                                attrs="{'invisible': [('partner_matching_method', '!=', 'bank')]}"
+                            />
                         <field name="amount_column" />
                         <field name="amount_format" />
                         <field
