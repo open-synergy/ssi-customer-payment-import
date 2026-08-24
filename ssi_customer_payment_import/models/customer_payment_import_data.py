@@ -131,17 +131,58 @@ class CustomerPaymentImportData(models.Model):  # pylint: disable=too-few-public
     # Helpers
     # -------------------------------------------------------------------
 
+    def _find_partner(self, row):
+        """Resolve the paying res.partner for ``row``.
+
+        Dispatches on the import Type's ``partner_matching_method``.
+        Extension point: a module adding another value to that
+        Selection overrides this method with its own ``elif`` branch
+        for that value, then falls through to
+        ``super()._find_partner(row)``.
+
+        :param row: dict of column name/index to cell value, as
+            returned by ``_get_row_data``
+        :return: matched ``res.partner`` recordset, possibly empty
+        :raises odoo.exceptions.UserError: propagated from the
+            underlying matching method when no partner is found
+        """
+        self.ensure_one()
+        ctype = self._get_type()
+        if ctype.partner_matching_method == "bank":
+            return self._find_partner_by_bank_account(
+                row.get(ctype.partner_bank_account_column)
+            )
+        return self.env["res.partner"]
+
     def _find_partner_by_bank_account(self, acc_number):
         """Return the res.partner owning the res.partner.bank matching
-        ``acc_number`` (compared after sanitization), or an empty recordset."""
+        ``acc_number`` (compared after sanitization).
+
+        :param acc_number: raw bank account number read from the row
+        :return: matched ``res.partner`` recordset
+        :raises odoo.exceptions.UserError: no ``res.partner.bank``
+            with a matching sanitized account number exists
+        """
         self.ensure_one()
         sanitized = sanitize_account_number(str(acc_number or ""))
-        if not sanitized:
-            return self.env["res.partner"]
-        bank = self.env["res.partner.bank"].search(
-            [("sanitized_acc_number", "=", sanitized)], limit=1
-        )
-        return bank.partner_id
+        bank = self.env["res.partner.bank"]
+        if sanitized:
+            bank = bank.search([("sanitized_acc_number", "=", sanitized)], limit=1)
+        partner = bank.partner_id
+        if not partner:
+            imp = self.import_id
+            raise UserError(
+                _(
+                    """
+Context: Processing customer payment import data line
+Document: %s (sequence %s)
+Problem: No partner found with bank account number '%s'
+Solution: Register the bank account on the partner (res.partner.bank),
+          correct the data in this line, then retry the queue job"""
+                )
+                % (imp.name or str(imp.id), self.sequence, acc_number)
+            )
+        return partner
 
     def _parse_amount(self, value):
         """Parse ``value`` (number or string, possibly with thousands/decimal
@@ -379,25 +420,11 @@ Solution: Verify the Date Format on the import Type matches the actual data,
 
         ctype = self._get_type()
         row = self._get_row_data()
-        imp = self.import_id
 
         if self._check_exclude(row):
             return True
 
-        acc_number = row.get(ctype.partner_bank_account_column)
-        partner = self._find_partner_by_bank_account(acc_number)
-        if not partner:
-            raise UserError(
-                _(
-                    """
-Context: Processing customer payment import data line
-Document: %s (sequence %s)
-Problem: No partner found with bank account number '%s'
-Solution: Register the bank account on the partner (res.partner.bank),
-          correct the data in this line, then retry the queue job"""
-                )
-                % (imp.name or str(imp.id), self.sequence, acc_number)
-            )
+        partner = self._find_partner(row)
 
         unique_ref = (
             row.get(ctype.unique_ref_column) if ctype.unique_ref_column else False
