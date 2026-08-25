@@ -1,0 +1,425 @@
+scenarios:
+  - name:
+      "Customer Payment Import Data - Identification partner match combined with
+      bank_account_column usage resolves the mapped account"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal ID Usage Column"
+          type: "bank"
+
+      - step: "Create identification category"
+        action: "create"
+        model: "res.partner.id_category"
+        save_as: "category"
+        values:
+          code: "PIDU1CAT"
+          name: "Student Number Usage Column Test"
+
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Identification Usage Column Partner"
+          is_company: true
+
+      - step: "Register identification number on the partner"
+        action: "create"
+        model: "res.partner.id_number"
+        save_as: "id_number"
+        values:
+          name: "PK-201"
+          category_id: "REC: category.id"
+          partner_id: "REC: partner.id"
+
+      - step: "Create the usage that will be resolved from the account column"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage"
+        values:
+          name: "Uang Sekolah - ID Usage Column"
+          code: "PIDU1USG"
+
+      - step: "Create the partner's VA bank account, carrying that usage"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "8400000001"
+          partner_id: "REC: partner.id"
+          usage_id: "REC: usage.id"
+
+      - step: "Create the destination account mapped to the usage"
+        action: "create"
+        model: "account.account"
+        save_as: "account"
+        values:
+          name: "Piutang Enrollment - ID Usage Column"
+          code: "PIDU1ACC"
+          user_type_id: "REF: account.data_account_type_receivable"
+          reconcile: true
+
+      - step:
+          "Create type: partner matching by identification, usage matching from the bank
+          account column, both configured at once"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Identification + Usage Column Test Type"
+          code: "PIDU1"
+          date_column: "date"
+          amount_column: "amount"
+          partner_matching_method: "identification"
+          partner_identification_column: "id_no"
+          partner_id_category_id: "REC: category.id"
+          usage_matching_method: "bank_account_column"
+          partner_bank_account_column: "account_number"
+          account_mapping_ids:
+            - - 0
+              - 0
+              - sequence: 10
+                usage_id: "REC: usage.id"
+                account_id: "REC: account.id"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step:
+          "Create data line carrying both the identification value and the VA account
+          number"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-04-01", "id_no": "PK-201", "account_number": "8400000001",
+            "amount": "120000"}'
+
+      - step: "Process the data line via the queue entry point"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+
+      - step:
+          "Assert the line resolved to the identification partner while the destination
+          account came from the usage mapping"
+        action: "assert"
+        target: "data_line"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          partner_id:
+            type: "m2o"
+            expected: "REC: partner"
+          payment_id.destination_account_id:
+            type: "m2o"
+            expected: "REC: account"
+
+  - name:
+      "Customer Payment Import Data - Identification partner match combined with
+      bank_account_column usage falls back to the import's account_id when the bank
+      account carries no usage"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal ID Usage Column Fallback"
+          type: "bank"
+
+      - step: "Create identification category"
+        action: "create"
+        model: "res.partner.id_category"
+        save_as: "category"
+        values:
+          code: "PIDU2CAT"
+          name: "Student Number Usage Column Fallback Test"
+
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Identification Usage Column Fallback Partner"
+          is_company: true
+
+      - step: "Register identification number on the partner"
+        action: "create"
+        model: "res.partner.id_number"
+        save_as: "id_number"
+        values:
+          name: "PK-202"
+          category_id: "REC: category.id"
+          partner_id: "REC: partner.id"
+
+      - step: "Create the partner's VA bank account, WITHOUT any usage configured on it"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "8400000002"
+          partner_id: "REC: partner.id"
+
+      - step: "Create the account configured on the import document header"
+        action: "create"
+        model: "account.account"
+        save_as: "import_account"
+        values:
+          name: "Piutang Enrollment - ID Usage Column Fallback"
+          code: "PIDU2ACC"
+          user_type_id: "REF: account.data_account_type_receivable"
+          reconcile: true
+
+      - step:
+          "Create type: partner matching by identification, usage matching from the bank
+          account column, no mapping line registered"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Identification + Usage Column Fallback Test Type"
+          code: "PIDU2"
+          date_column: "date"
+          amount_column: "amount"
+          partner_matching_method: "identification"
+          partner_identification_column: "id_no"
+          partner_id_category_id: "REC: category.id"
+          usage_matching_method: "bank_account_column"
+          partner_bank_account_column: "account_number"
+
+      - step: "Create import document with account_id set"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+          account_id: "REC: import_account.id"
+
+      - step:
+          "Create data line carrying the identification value and the usage-less VA
+          account number"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-04-01", "id_no": "PK-202", "account_number": "8400000002",
+            "amount": "80000"}'
+
+      - step: "Process the data line via the queue entry point"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+
+      - step:
+          "Assert the line resolved to the identification partner while the destination
+          account fell back to the import document's account_id"
+        action: "assert"
+        target: "data_line"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          partner_id:
+            type: "m2o"
+            expected: "REC: partner"
+          payment_id.destination_account_id:
+            type: "m2o"
+            expected: "REC: import_account"
+
+  - name:
+      "Customer Payment Import Data - Identification partner match combined with
+      partner_bank usage raises when the matched partner's eligible bank accounts carry
+      more than one usage"
+    steps:
+      - step:
+          "Create the bank shared by the journal's own account and both of the partner's
+          bank accounts"
+        action: "create"
+        model: "res.bank"
+        save_as: "bank"
+        values:
+          name: "Test Bank ID Usage Partner Bank"
+
+      - step:
+          "Create the journal's own bank account, held by the company, so the candidate
+          filter's bank-matches-journal ground is exercised"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "journal_bank_account"
+        values:
+          acc_number: "8400000099"
+          bank_id: "REC: bank.id"
+          partner_id: "EVAL: env.company.partner_id.id"
+
+      - step: "Create bank journal, bound to that bank account"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal ID Usage Partner Bank"
+          type: "bank"
+          bank_account_id: "REC: journal_bank_account.id"
+
+      - step: "Create identification category"
+        action: "create"
+        model: "res.partner.id_category"
+        save_as: "category"
+        values:
+          code: "PIDU3CAT"
+          name: "Student Number Usage Partner Bank Test"
+
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Identification Usage Partner Bank Ambiguous Partner"
+          is_company: true
+
+      - step: "Register identification number on the partner"
+        action: "create"
+        model: "res.partner.id_number"
+        save_as: "id_number"
+        values:
+          name: "PK-203"
+          category_id: "REC: category.id"
+          partner_id: "REC: partner.id"
+
+      - step: "Create the first usage"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_a"
+        values:
+          name: "Uang Sekolah - ID Usage Partner Bank"
+          code: "PIDU3USA"
+
+      - step: "Create the second usage"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_b"
+        values:
+          name: "Uang Pangkal - ID Usage Partner Bank"
+          code: "PIDU3USB"
+
+      - step: "Create the account mapped to the first usage"
+        action: "create"
+        model: "account.account"
+        save_as: "account_a"
+        values:
+          name: "Piutang Enrollment - ID Usage Partner Bank"
+          code: "PIDU3ACA"
+          user_type_id: "REF: account.data_account_type_receivable"
+          reconcile: true
+
+      - step: "Create the account mapped to the second usage"
+        action: "create"
+        model: "account.account"
+        save_as: "account_b"
+        values:
+          name: "Piutang Pangkal - ID Usage Partner Bank"
+          code: "PIDU3ACB"
+          user_type_id: "REF: account.data_account_type_receivable"
+          reconcile: true
+
+      - step:
+          "Create the partner's first bank account, sharing the journal's bank, carrying
+          the first usage"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank_a"
+        values:
+          acc_number: "8400000003"
+          bank_id: "REC: bank.id"
+          partner_id: "REC: partner.id"
+          usage_id: "REC: usage_a.id"
+
+      - step:
+          "Create the partner's second bank account, also sharing the journal's bank,
+          carrying the second usage"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank_b"
+        values:
+          acc_number: "8400000004"
+          bank_id: "REC: bank.id"
+          partner_id: "REC: partner.id"
+          usage_id: "REC: usage_b.id"
+
+      - step:
+          "Create type: partner matching by identification, usage matching from the
+          matched partner's own bank accounts, both usages mapped"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Identification + Usage Partner Bank Test Type"
+          code: "PIDU3"
+          date_column: "date"
+          amount_column: "amount"
+          partner_matching_method: "identification"
+          partner_identification_column: "id_no"
+          partner_id_category_id: "REC: category.id"
+          usage_matching_method: "partner_bank"
+          account_mapping_ids:
+            - - 0
+              - 0
+              - sequence: 10
+                usage_id: "REC: usage_a.id"
+                account_id: "REC: account_a.id"
+            - - 0
+              - 0
+              - sequence: 20
+                usage_id: "REC: usage_b.id"
+                account_id: "REC: account_b.id"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step:
+          "Create data line carrying only the identification value -- no bank account
+          column is configured on this Type at all"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data: '{"date": "2026-04-01", "id_no": "PK-203", "amount": "60000"}'
+
+      - step:
+          "Process the row, expect it to raise on the ambiguous usage (asserting the
+          resulting state='error' here would not work: expect_error wraps the call in a
+          savepoint that gets rolled back, so that write is lost -- same limitation
+          documented in ssi_customer_payment_import's own negative usage-matching
+          scenarios, odoo-yaml-test source case.py L-26)"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+        expect_error:
+          type: "UserError"
+          message_contains: "more than"

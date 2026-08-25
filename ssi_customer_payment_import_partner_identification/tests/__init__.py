@@ -4,3 +4,4 @@
 
 from . import test_customer_payment_import_type_partner_identification
 from . import test_customer_payment_import_data_partner_identification
+from . import test_customer_payment_import_data_partner_identification_usage_matching
