@@ -340,3 +340,116 @@ class TestCustomerPaymentImport(YamlTransactionCase):
         self.assertEqual(data_line.state, "error")
         self.assertIn("No partner found", data_line.error_message)
         self.assertEqual(import_doc.state, "queue_done")
+
+    def test_process_payment_ambiguous_usage_leaves_line_in_error(self):
+        """``_process_payment`` on an ambiguous usage writes ``error``.
+
+        Pure Python -- trigger P13 (L-26: YAML's ``expect_error`` runs
+        the call inside a savepoint that gets rolled back once the
+        expected exception is caught, so the ``_write_error_result``
+        write ``_process_payment`` performs in its ``except`` block
+        before re-raising would be lost if asserted via YAML). The
+        YAML scenario "Usage Matching Method 'partner_bank' raises
+        when the matched partner's bank accounts carry two mapped
+        usages" already proves the ``UserError`` is raised with the
+        right message; calling ``_process_payment`` directly here,
+        with no savepoint around it, keeps the ``state='error'``
+        write visible for assertion.
+        """
+        account_a = self.env["account.account"].create(
+            {
+                "name": "Piutang A - Ambiguous Usage P13",
+                "code": "PYTT-USGA13",
+                "user_type_id": self.env.ref("account.data_account_type_receivable").id,
+                "reconcile": True,
+            }
+        )
+        account_b = self.env["account.account"].create(
+            {
+                "name": "Piutang B - Ambiguous Usage P13",
+                "code": "PYTT-USGB13",
+                "user_type_id": self.env.ref("account.data_account_type_receivable").id,
+                "reconcile": True,
+            }
+        )
+        usage_a = self.env["res_partner_bank_usage"].create(
+            {"name": "Uang Sekolah - Ambiguous Usage P13", "code": "PYTT-USGUA13"}
+        )
+        usage_b = self.env["res_partner_bank_usage"].create(
+            {"name": "Uang Pangkal - Ambiguous Usage P13", "code": "PYTT-USGUB13"}
+        )
+        bank = self.env["res.bank"].create({"name": "Bank Ambiguous Usage P13"})
+        journal_bank_account = self.env["res.partner.bank"].create(
+            {
+                "acc_number": "8300000098",
+                "partner_id": self.env.company.partner_id.id,
+                "bank_id": bank.id,
+            }
+        )
+        journal = self.env["account.journal"].create(
+            {
+                "name": "Test Journal Ambiguous Usage P13",
+                "type": "bank",
+                "bank_account_id": journal_bank_account.id,
+            }
+        )
+        partner = self.env["res.partner"].create(
+            {"name": "Ambiguous Usage P13 Partner", "is_company": True}
+        )
+        partner_bank_a = self.env["res.partner.bank"].create(
+            {
+                "acc_number": "8300000096",
+                "partner_id": partner.id,
+                "usage_id": usage_a.id,
+                "bank_id": bank.id,
+            }
+        )
+        self.env["res.partner.bank"].create(
+            {
+                "acc_number": "8300000097",
+                "partner_id": partner.id,
+                "usage_id": usage_b.id,
+                "bank_id": bank.id,
+            }
+        )
+        ctype = self._create_type(
+            code="PYTT-USGT13",
+            usage_matching_method="partner_bank",
+            account_mapping_ids=[
+                (
+                    0,
+                    0,
+                    {
+                        "sequence": 10,
+                        "usage_id": usage_a.id,
+                        "account_id": account_a.id,
+                    },
+                ),
+                (
+                    0,
+                    0,
+                    {
+                        "sequence": 20,
+                        "usage_id": usage_b.id,
+                        "account_id": account_b.id,
+                    },
+                ),
+            ],
+        )
+        import_doc = self.env["customer_payment_import"].create(
+            {"type_id": ctype.id, "journal_id": journal.id}
+        )
+        data_line = self.env["customer_payment_import.data"].create(
+            {
+                "import_id": import_doc.id,
+                "sequence": 1,
+                "data": '{"date": "2026-07-20", '
+                '"account_number": "%s", "amount": "40000"}'
+                % partner_bank_a.acc_number,
+            }
+        )
+
+        with self.assertRaises(UserError):
+            data_line._process_payment()
+
+        self.assertEqual(data_line.state, "error")
