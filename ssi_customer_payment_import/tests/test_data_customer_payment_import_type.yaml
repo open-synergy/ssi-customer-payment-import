@@ -37,6 +37,9 @@ scenarios:
           partner_matching_method:
             type: "value"
             expected: "bank"
+          usage_matching_method:
+            type: "value"
+            expected: "none"
 
   - name: "Edit Customer Payment Import Type Name"
     steps:
@@ -192,6 +195,7 @@ scenarios:
           date_column: "date"
           partner_bank_account_column: "account_number"
           amount_column: "amount"
+          usage_matching_method: "bank_account_column"
           account_mapping_ids:
             - - 0
               - 0
@@ -268,6 +272,7 @@ scenarios:
           account_selection_method: "domain"
           account_domain:
             'EVAL: "[(''id'', ''='', %d)]" % registry[''account_allowed''].id'
+          usage_matching_method: "bank_account_column"
           account_mapping_ids:
             - - 0
               - 0
@@ -322,6 +327,7 @@ scenarios:
           date_column: "date"
           partner_bank_account_column: "account_number"
           amount_column: "amount"
+          usage_matching_method: "bank_account_column"
           account_mapping_ids:
             - - 0
               - 0
@@ -372,5 +378,64 @@ scenarios:
           date_column: "date"
           amount_column: "amount"
           partner_matching_method: "bank"
+        expect_error:
+          type: "ValidationError"
+
+  - name:
+      "Customer Payment Import Type - Bank Account Column usage method without its
+      source column is rejected"
+    steps:
+      - step:
+          "Creating a type with Usage Matching Method = From Bank Account Column and an
+          empty Partner Bank Account Column is rejected"
+        action: "create"
+        model: "customer_payment_import_type"
+        values:
+          name: "Usage Matching Without Column Test Type"
+          code: "UMWC001"
+          date_column: "date"
+          amount_column: "amount"
+          usage_matching_method: "bank_account_column"
+        expect_error:
+          type: "ValidationError"
+
+  - name:
+      "Customer Payment Import Type - Usage account mapping unreachable under No Usage
+      is rejected"
+    steps:
+      - step: "Create the account used by the unreachable mapping line"
+        action: "create"
+        model: "account.account"
+        save_as: "account_unreachable"
+        values:
+          name: "Piutang Unreachable Mapping"
+          code: "TSTAR05"
+          user_type_id: "REF: account.data_account_type_receivable"
+          reconcile: true
+
+      - step: "Create a bank account usage"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_unreachable"
+        values:
+          name: "Uang Sekolah - Unreachable"
+          code: "TSTUS05"
+
+      - step: "Creating a No Usage type with an Usage Account Mapping line is rejected"
+        action: "create"
+        model: "customer_payment_import_type"
+        values:
+          name: "Unreachable Mapping Test Type"
+          code: "UMUR001"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          usage_matching_method: "none"
+          account_mapping_ids:
+            - - 0
+              - 0
+              - sequence: 10
+                usage_id: "REC: usage_unreachable.id"
+                account_id: "REC: account_unreachable.id"
         expect_error:
           type: "ValidationError"

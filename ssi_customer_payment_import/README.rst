@@ -9,6 +9,12 @@ Customer Payment Import
 Import and process customer payment transactions from bank files (CSV or
 XLSX), and automatically create Customer Payments from the imported data.
 
+Each Customer Payment Import Type configures a Partner Matching Method (how
+the paying customer is identified from each row) and, independently, a
+Usage Matching Method (how a bank account usage is resolved to drive Usage
+Account Mapping) -- either read off a bank account column, looked up on
+the matched partner's own bank accounts, or disabled entirely.
+
 
 Work Instruction
 ================

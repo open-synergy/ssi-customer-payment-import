@@ -60,9 +60,10 @@
                         <field name="date_column" />
                         <field name="date_format" />
                         <field name="partner_matching_method" />
+                        <field name="usage_matching_method" />
                         <field
                                 name="partner_bank_account_column"
-                                attrs="{'invisible': [('partner_matching_method', '!=', 'bank')]}"
+                                attrs="{'invisible': ['&amp;', ('partner_matching_method', '!=', 'bank'), ('usage_matching_method', '!=', 'bank_account_column')]}"
                             />
                         <field name="amount_column" />
                         <field name="amount_format" />
@@ -127,7 +128,11 @@
                             />
                     </group>
                 </page>
-                <page name="usage_account_mapping" string="Usage Account Mapping">
+                <page
+                        name="usage_account_mapping"
+                        string="Usage Account Mapping"
+                        attrs="{'invisible': [('usage_matching_method', '=', 'none')]}"
+                    >
                     <field name="account_mapping_ids">
                         <tree editable="bottom">
                             <field name="sequence" widget="handle" />

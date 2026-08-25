@@ -123,8 +123,32 @@ class CustomerPaymentImportType(models.Model):
         help=(
             "Column name (or 0-based index if No Header Line is checked) "
             "containing the counterparty bank account number. Used to identify "
-            "the paying customer by matching it against res.partner.bank. "
-            "Required only when Partner Matching Method = Bank Account."
+            "the paying customer by matching it against res.partner.bank when "
+            "Partner Matching Method = Bank Account, and/or to resolve the "
+            "usage feeding Usage Account Mapping when Usage Matching Method "
+            "= From Bank Account Column. Required whenever either of those "
+            "two is set to that value."
+        ),
+    )
+    usage_matching_method = fields.Selection(
+        string="Usage Matching Method",
+        selection=[
+            ("bank_account_column", "From Bank Account Column"),
+            ("partner_bank", "From Matched Partner's Bank Account"),
+            ("none", "No Usage"),
+        ],
+        required=True,
+        default="none",
+        help=(
+            "Method used to resolve the usage (res.partner.bank.usage_id) "
+            "that feeds Usage Account Mapping for each row, independently "
+            "of Partner Matching Method. 'From Bank Account Column' reads "
+            "it off the bank account found through Partner Bank Account "
+            "Column, which then becomes required. 'From Matched Partner's "
+            "Bank Account' looks it up on the matched partner's own bank "
+            "accounts instead. 'No Usage' disables Usage Account Mapping "
+            "for this Type -- saving one with mapping lines configured is "
+            "rejected."
         ),
     )
     amount_column = fields.Char(
@@ -431,6 +455,85 @@ Solution: Fill in Partner Bank Account Column, or choose a different
         self.ensure_one()
         if self.partner_matching_method == "bank":
             return bool(self.partner_bank_account_column)
+        return True
+
+    @api.constrains("usage_matching_method", "partner_bank_account_column")
+    def _check_usage_matching_method(self):
+        """Reject a Bank Account Column usage method without its
+        source column.
+
+        Raises ``ValidationError`` when
+        ``_check_usage_matching_method_condition`` fails.
+        """
+        for record in self:
+            if not record._check_usage_matching_method_condition():
+                error_message = (
+                    _(
+                        """
+Context: Saving customer payment import type
+Type: %s
+Problem: Usage Matching Method is 'From Bank Account Column' but
+         Partner Bank Account Column is empty
+Solution: Fill in Partner Bank Account Column, or choose a different
+          Usage Matching Method"""
+                    )
+                    % (record.display_name,)
+                )
+                raise ValidationError(error_message)
+
+    def _check_usage_matching_method_condition(self):
+        """Return whether this Type's usage matching setup is
+        complete.
+
+        Written as an if/elif dispatcher per ``usage_matching_method``
+        value, mirroring
+        ``_check_partner_matching_method_condition``, so a module
+        adding another value extends this with its own ``elif``
+        branch in an override.
+
+        :return: ``False`` when ``usage_matching_method`` is
+            ``"bank_account_column"`` and
+            ``partner_bank_account_column`` is empty; ``True``
+            otherwise
+        """
+        self.ensure_one()
+        if self.usage_matching_method == "bank_account_column":
+            return bool(self.partner_bank_account_column)
+        return True
+
+    @api.constrains("usage_matching_method", "account_mapping_ids")
+    def _check_account_mapping_reachable(self):
+        """Reject Usage Account Mapping lines that can never apply.
+
+        Raises ``ValidationError`` when
+        ``_check_account_mapping_reachable_condition`` fails.
+        """
+        for record in self:
+            if not record._check_account_mapping_reachable_condition():
+                error_message = (
+                    _(
+                        """
+Context: Saving customer payment import type
+Type: %s
+Problem: Usage Matching Method is 'No Usage' but this Type still has
+         Usage Account Mapping line(s)
+Solution: Remove the Usage Account Mapping lines, or choose a Usage
+          Matching Method other than 'No Usage'"""
+                    )
+                    % (record.display_name,)
+                )
+                raise ValidationError(error_message)
+
+    def _check_account_mapping_reachable_condition(self):
+        """Return whether this Type's mapping lines can ever apply.
+
+        :return: ``False`` when ``usage_matching_method`` is
+            ``"none"`` and ``account_mapping_ids`` is not empty;
+            ``True`` otherwise
+        """
+        self.ensure_one()
+        if self.usage_matching_method == "none":
+            return not self.account_mapping_ids
         return True
 
     def _normalize_amount_text(self, value):
