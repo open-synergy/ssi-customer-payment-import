@@ -100,6 +100,20 @@ msgstr ""
 #, python-format
 msgid ""
 "\n"
+"Context: Processing customer payment import data line\n"
+"Document: %s (sequence %s)\n"
+"Problem: Partner '%s' has eligible bank accounts mapped to more than\n"
+"         one usage: %s\n"
+"Solution: Configure a single usage among the partner's eligible bank\n"
+"          accounts, or correct the data in this line, then retry the\n"
+"          queue job"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: code:addons/ssi_customer_payment_import/models/customer_payment_import_data.py:0
+#, python-format
+msgid ""
+"\n"
 "Context: Retrying customer payment import data line\n"
 "Document: %s (sequence %s)\n"
 "Problem: This line is in state '%s' and cannot be retried\n"
@@ -130,6 +144,32 @@ msgid ""
 "         Account Column is empty\n"
 "Solution: Fill in Partner Bank Account Column, or choose a different\n"
 "          Partner Matching Method"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: code:addons/ssi_customer_payment_import/models/customer_payment_import_type.py:0
+#, python-format
+msgid ""
+"\n"
+"Context: Saving customer payment import type\n"
+"Type: %s\n"
+"Problem: Usage Matching Method is 'From Bank Account Column' but\n"
+"         Partner Bank Account Column is empty\n"
+"Solution: Fill in Partner Bank Account Column, or choose a different\n"
+"          Usage Matching Method"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: code:addons/ssi_customer_payment_import/models/customer_payment_import_type.py:0
+#, python-format
+msgid ""
+"\n"
+"Context: Saving customer payment import type\n"
+"Type: %s\n"
+"Problem: Usage Matching Method is 'No Usage' but this Type still has\n"
+"         Usage Account Mapping line(s)\n"
+"Solution: Remove the Usage Account Mapping lines, or choose a Usage\n"
+"          Matching Method other than 'No Usage'"
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -500,8 +540,10 @@ msgstr ""
 msgid ""
 "Column name (or 0-based index if No Header Line is checked) containing the "
 "counterparty bank account number. Used to identify the paying customer by "
-"matching it against res.partner.bank. Required only when Partner Matching "
-"Method = Bank Account."
+"matching it against res.partner.bank when Partner Matching Method = Bank "
+"Account, and/or to resolve the usage feeding Usage Account Mapping when "
+"Usage Matching Method = From Bank Account Column. Required whenever either "
+"of those two is set to that value."
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -878,6 +920,16 @@ msgid "Font awesome icon e.g. fa-tasks"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__usage_matching_method__bank_account_column
+msgid "From Bank Account Column"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__usage_matching_method__partner_bank
+msgid "From Matched Partner's Bank Account"
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model_terms:ir.ui.view,arch_db:ssi_customer_payment_import.customer_payment_import_view_search
 msgid "Group By"
 msgstr ""
@@ -1161,6 +1213,18 @@ msgid ""
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__usage_matching_method
+msgid ""
+"Method used to resolve the usage (res.partner.bank.usage_id) that feeds "
+"Usage Account Mapping for each row, independently of Partner Matching "
+"Method. 'From Bank Account Column' reads it off the bank account found "
+"through Partner Bank Account Column, which then becomes required. 'From "
+"Matched Partner's Bank Account' looks it up on the matched partner's own "
+"bank accounts instead. 'No Usage' disables Usage Account Mapping for this "
+"Type -- saving one with mapping lines configured is rejected."
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import__my_activity_date_deadline
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__my_activity_date_deadline
 msgid "My Activity Deadline"
@@ -1209,6 +1273,11 @@ msgstr ""
 #. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__no_header
 msgid "No Header Line"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields.selection,name:ssi_customer_payment_import.selection__customer_payment_import_type__usage_matching_method__none
+msgid "No Usage"
 msgstr ""
 
 #. module: ssi_customer_payment_import
@@ -1683,6 +1752,11 @@ msgstr ""
 #. module: ssi_customer_payment_import
 #: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__account_mapping_ids
 msgid "Usage Account Mappings"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__usage_matching_method
+msgid "Usage Matching Method"
 msgstr ""
 
 #. module: ssi_customer_payment_import
