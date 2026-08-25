@@ -9,10 +9,11 @@
 #          any other partner matching method could never make Usage
 #          Account Mapping apply. It is now driven by its own field,
 #          usage_matching_method, independent of partner_matching_method.
-#          This is a "pre" script (not "post") because
-#          usage_matching_method is required=True: the column must
-#          already hold a value on every row before the ORM applies the
-#          NOT NULL constraint while loading the field.
+#          This is a "pre" script (not "post") because it runs
+#          before _init_column overwrites every row with that
+#          field's default, "none" -- so the backfill can still tell
+#          rows apart by partner_matching_method, and the
+#          usage_matching_method IS NULL guard still means something.
 
 import logging
 
