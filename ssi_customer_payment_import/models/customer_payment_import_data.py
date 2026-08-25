@@ -195,14 +195,51 @@ Solution: Register the bank account on the partner (res.partner.bank),
             )
         return partner
 
-    def _get_usage(self, row):
+    def _get_usage(self, row, partner=None):
         """Resolve the paying bank account's usage for ``row``.
 
-        Dispatches on the import Type's ``partner_matching_method``,
-        mirroring ``_find_partner``. Extension point: a module adding
-        another value to that Selection overrides this method with
-        its own ``elif`` branch for that value, then falls through to
-        ``super()._get_usage(row)``.
+        **Contract change:** this now dispatches on the import
+        Type's ``usage_matching_method`` -- **not**
+        ``partner_matching_method`` anymore -- and takes a new
+        ``partner`` keyword. Usage resolution is a configuration
+        axis of its own, independent of how the paying partner was
+        matched, so it also works for a Type whose
+        ``partner_matching_method`` is not ``"bank"`` (e.g.
+        ``"identification"``, added by
+        ``ssi_customer_payment_import_partner_identification``). Any
+        override written against the previous signature
+        (``_get_usage(self, row)``) must be updated to accept
+        ``partner`` too. Written as an if/elif dispatcher per value,
+        mirroring ``_find_partner``: a module adding another value
+        overrides this method with its own ``elif`` branch, then
+        falls through to ``super()._get_usage(row, partner=partner)``.
+
+        :param row: dict of column name/index to cell value, as
+            returned by ``_get_row_data``
+        :param partner: matched ``res.partner`` record for this row,
+            or ``None``; only read by the ``"partner_bank"`` branch
+        :return: ``res_partner_bank_usage`` recordset, possibly empty
+        :raises odoo.exceptions.UserError: propagated from
+            ``_get_usage_by_partner_bank`` when ``partner``'s eligible
+            bank accounts carry more than one distinct usage
+        """
+        self.ensure_one()
+        ctype = self._get_type()
+        if ctype.usage_matching_method == "bank_account_column":
+            return self._get_usage_by_bank_account_column(row)
+        elif ctype.usage_matching_method == "partner_bank":
+            return self._get_usage_by_partner_bank(partner)
+        return self.env["res_partner_bank_usage"]
+
+    def _get_usage_by_bank_account_column(self, row):
+        """Resolve usage from the bank account read out of Partner
+        Bank Account Column.
+
+        This is the historical behaviour of ``_get_usage`` before
+        ``usage_matching_method`` existed, moved here unchanged: the
+        paying bank account is looked up through the same column
+        used for Bank Account partner matching, but now
+        independently of ``partner_matching_method``.
 
         :param row: dict of column name/index to cell value, as
             returned by ``_get_row_data``
@@ -210,10 +247,78 @@ Solution: Register the bank account on the partner (res.partner.bank),
         """
         self.ensure_one()
         ctype = self._get_type()
-        if ctype.partner_matching_method == "bank":
-            bank = self._find_bank_account(row.get(ctype.partner_bank_account_column))
-            return bank.usage_id
-        return self.env["res_partner_bank_usage"]
+        bank = self._find_bank_account(row.get(ctype.partner_bank_account_column))
+        return bank.usage_id
+
+    def _get_usage_by_partner_bank(self, partner):
+        """Resolve usage from the matched partner's own bank accounts.
+
+        Counts the number of *distinct* usages found on
+        ``_get_usage_bank_candidates(partner)``: zero means no usage
+        is configured on any eligible bank account -- not an error,
+        ``_get_destination_account`` simply falls further down its
+        own fallback chain; exactly one is returned; more than one
+        is ambiguous and raises.
+
+        :param partner: ``res.partner`` record being paid
+        :return: ``res_partner_bank_usage`` recordset, possibly empty
+        :raises odoo.exceptions.UserError: the eligible bank accounts
+            carry more than one distinct usage
+        """
+        self.ensure_one()
+        candidates = self._get_usage_bank_candidates(partner)
+        usages = candidates.mapped("usage_id")
+        if len(usages) <= 1:
+            return usages
+        imp = self.import_id
+        raise UserError(
+            _(
+                """
+Context: Processing customer payment import data line
+Document: %s (sequence %s)
+Problem: Partner '%s' has eligible bank accounts mapped to more than
+         one usage: %s
+Solution: Configure a single usage among the partner's eligible bank
+          accounts, or correct the data in this line, then retry the
+          queue job"""
+            )
+            % (
+                imp.name or str(imp.id),
+                self.sequence,
+                partner.display_name,
+                ", ".join(usages.mapped("display_name")),
+            )
+        )
+
+    def _get_usage_bank_candidates(self, partner):
+        """Return ``partner``'s bank accounts eligible to resolve usage.
+
+        Filters ``partner.bank_ids`` down to accounts that are
+        physically impossible to be anything but the one meant, on
+        exactly three grounds: (1) a usage is configured on the
+        account at all; (2) the account belongs to no company, or to
+        this import document's own company; (3) when the payment
+        journal's bank account has a bank (``res.bank``), the
+        candidate's bank matches it. Deliberately does **not**
+        filter by ``type_id.account_mapping_ids`` -- narrowing
+        candidates with accounting configuration would turn an
+        ambiguous row into a seemingly-certain single choice,
+        landing money on the wrong receivable account without
+        complaint.
+
+        :param partner: ``res.partner`` record being paid
+        :return: ``res.partner.bank`` recordset, possibly empty
+        """
+        self.ensure_one()
+        imp = self.import_id
+        journal_bank = imp.journal_id.bank_account_id.bank_id
+        candidates = partner.bank_ids.filtered(lambda bank: bank.usage_id)
+        candidates = candidates.filtered(
+            lambda bank: not bank.company_id or bank.company_id == imp.company_id
+        )
+        if journal_bank:
+            candidates = candidates.filtered(lambda bank: bank.bank_id == journal_bank)
+        return candidates
 
     def _parse_amount(self, value):
         """Parse ``value`` (number or string, possibly with thousands/decimal
@@ -482,11 +587,15 @@ Solution: Verify the Date Format on the import Type matches the actual data,
         """Resolve the destination account of this line's payment.
 
         Walks an ordered fallback chain and returns the first
-        non-empty result; an unmapped usage is never an error:
+        non-empty result; an unmapped usage is never an error. The
+        usage itself now comes from ``_get_usage(row,
+        partner=partner)`` -- ``partner`` is forwarded so the
+        ``"partner_bank"`` usage matching method can look up the
+        matched partner's own bank accounts:
 
-        1. the account mapped, on the import Type, to the paying bank
-           account's usage (``res.partner.bank.usage_id``), when it is
-           set and matches one of the Type's mapping lines;
+        1. the account mapped, on the import Type, to the resolved
+           usage (``res.partner.bank.usage_id``), when it is set and
+           matches one of the Type's mapping lines;
         2. the ``account_id`` of the import document header;
         3. the paying partner's default receivable account.
 
@@ -501,7 +610,7 @@ Solution: Verify the Date Format on the import Type matches the actual data,
         """
         self.ensure_one()
         ctype = self._get_type()
-        usage = self._get_usage(row)
+        usage = self._get_usage(row, partner=partner)
         if usage:
             account = ctype._get_account_by_usage(usage)
             if account:

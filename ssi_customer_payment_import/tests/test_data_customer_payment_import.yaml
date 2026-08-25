@@ -3014,6 +3014,7 @@ scenarios:
           partner_bank_account_column: "account_number"
           amount_column: "amount"
           communication_column: "description"
+          usage_matching_method: "bank_account_column"
           account_mapping_ids:
             - - 0
               - 0
@@ -3186,6 +3187,7 @@ scenarios:
           date_column: "date"
           partner_bank_account_column: "account_number"
           amount_column: "amount"
+          usage_matching_method: "bank_account_column"
           account_mapping_ids:
             - - 0
               - 0
@@ -3304,6 +3306,7 @@ scenarios:
           date_column: "date"
           partner_bank_account_column: "account_number"
           amount_column: "amount"
+          usage_matching_method: "bank_account_column"
           account_mapping_ids:
             - - 0
               - 0
@@ -3514,3 +3517,700 @@ scenarios:
           payment_id.destination_account_id:
             type: "m2o"
             expected: "EVAL: registry['partner'].property_account_receivable_id.id"
+
+  - name:
+      "Customer Payment Import - Usage Matching Method 'partner_bank' resolves the
+      matched partner's single mapped bank account"
+    steps:
+      - step: "Create the mapped Enrollment receivable account"
+        action: "create"
+        model: "account.account"
+        save_as: "account_mapped"
+        values:
+          name: "Piutang Enrollment - Partner Bank Single"
+          code: "USGPB01"
+          user_type_id: "REF: account.data_account_type_receivable"
+          reconcile: true
+
+      - step: "Create the bank account usage"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_x"
+        values:
+          name: "Uang Sekolah - Partner Bank Single"
+          code: "USGPBU01"
+
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Partner Bank Single VA Partner"
+          is_company: true
+
+      - step: "Create the partner's only bank account, carrying the usage"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "8300000001"
+          partner_id: "REC: partner.id"
+          usage_id: "REC: usage_x.id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Partner Bank Single"
+          type: "bank"
+
+      - step:
+          "Create type resolving usage from the matched partner's bank accounts, not the
+          bank account column"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Partner Bank Single VA Test Type"
+          code: "USGPBT01"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          usage_matching_method: "partner_bank"
+          account_mapping_ids:
+            - - 0
+              - 0
+              - sequence: 10
+                usage_id: "REC: usage_x.id"
+                account_id: "REC: account_mapped.id"
+
+      - step: "Create import document without any header account"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create the row paid from the partner's bank account"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-07-08", "account_number": "8300000001", "amount": "60000"}'
+
+      - step: "Process the row"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+
+      - step: "Assert the payment landed on the mapped account"
+        action: "assert"
+        target: "data_line"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          payment_id.destination_account_id:
+            type: "m2o"
+            expected: "REC: account_mapped.id"
+
+  - name:
+      "Customer Payment Import - Usage Matching Method 'partner_bank' still succeeds
+      when several bank accounts share one usage"
+    steps:
+      - step: "Create the mapped Enrollment receivable account"
+        action: "create"
+        model: "account.account"
+        save_as: "account_mapped"
+        values:
+          name: "Piutang Enrollment - Partner Bank Shared"
+          code: "USGPB02"
+          user_type_id: "REF: account.data_account_type_receivable"
+          reconcile: true
+
+      - step: "Create the bank account usage shared by every account below"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_shared"
+        values:
+          name: "Uang Sekolah - Partner Bank Shared"
+          code: "USGPBU02"
+
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Partner Bank Shared Usage Partner"
+          is_company: true
+
+      - step: "Create the partner's first bank account, carrying the shared usage"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank_one"
+        values:
+          acc_number: "8300000002"
+          partner_id: "REC: partner.id"
+          usage_id: "REC: usage_shared.id"
+
+      - step: "Create the partner's second bank account, carrying the shared usage"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank_two"
+        values:
+          acc_number: "8300000003"
+          partner_id: "REC: partner.id"
+          usage_id: "REC: usage_shared.id"
+
+      - step: "Create the partner's third bank account, carrying the shared usage"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank_three"
+        values:
+          acc_number: "8300000004"
+          partner_id: "REC: partner.id"
+          usage_id: "REC: usage_shared.id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Partner Bank Shared"
+          type: "bank"
+
+      - step: "Create type resolving usage from the matched partner's bank accounts"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Partner Bank Shared Usage Test Type"
+          code: "USGPBT02"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          usage_matching_method: "partner_bank"
+          account_mapping_ids:
+            - - 0
+              - 0
+              - sequence: 10
+                usage_id: "REC: usage_shared.id"
+                account_id: "REC: account_mapped.id"
+
+      - step: "Create import document without any header account"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create the row paid from the partner's first bank account"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-07-09", "account_number": "8300000002", "amount": "65000"}'
+
+      - step: "Process the row"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+
+      - step:
+          "Assert the payment still landed on the mapped account -- three accounts, one
+          distinct usage, is not ambiguous"
+        action: "assert"
+        target: "data_line"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          payment_id.destination_account_id:
+            type: "m2o"
+            expected: "REC: account_mapped.id"
+
+  - name:
+      "Customer Payment Import - Usage Matching Method 'partner_bank' narrows candidates
+      to the payment journal's own bank"
+    steps:
+      - step: "Create the two banks that tell the partner's two accounts apart"
+        action: "create"
+        model: "res.bank"
+        save_as: "bank_a"
+        values:
+          name: "Bank A - Partner Bank Journal Scope"
+
+      - step: "Create the second bank"
+        action: "create"
+        model: "res.bank"
+        save_as: "bank_b"
+        values:
+          name: "Bank B - Partner Bank Journal Scope"
+
+      - step: "Create the account mapped to the same-bank usage"
+        action: "create"
+        model: "account.account"
+        save_as: "account_a"
+        values:
+          name: "Piutang Enrollment - Partner Bank Journal Scope"
+          code: "USGPB03"
+          user_type_id: "REF: account.data_account_type_receivable"
+          reconcile: true
+
+      - step: "Create the same-bank usage, mapped on the Type"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_a"
+        values:
+          name: "Uang Sekolah - Partner Bank Journal Scope A"
+          code: "USGPBU03"
+
+      - step:
+          "Create the other-bank usage, deliberately left unmapped -- if the bank filter
+          did not narrow the candidates, this second usage would make the resolution
+          ambiguous"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_b"
+        values:
+          name: "Uang Sekolah - Partner Bank Journal Scope B"
+          code: "USGPBU04"
+
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Partner Bank Journal Scope Partner"
+          is_company: true
+
+      - step: "Create the partner's Bank A account, carrying usage A"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank_a"
+        values:
+          acc_number: "8300000005"
+          partner_id: "REC: partner.id"
+          bank_id: "REC: bank_a.id"
+          usage_id: "REC: usage_a.id"
+
+      - step: "Create the partner's Bank B account, carrying usage B"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank_b"
+        values:
+          acc_number: "8300000006"
+          partner_id: "REC: partner.id"
+          bank_id: "REC: bank_b.id"
+          usage_id: "REC: usage_b.id"
+
+      - step: "Create the company's own Bank A account, used by the journal"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "journal_bank"
+        values:
+          acc_number: "8300000099"
+          partner_id: "REC: company.partner_id.id"
+          bank_id: "REC: bank_a.id"
+
+      - step: "Create bank journal whose own bank account is at Bank A"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Partner Bank Journal Scope"
+          type: "bank"
+          bank_account_id: "REC: journal_bank.id"
+
+      - step: "Create type resolving usage from the matched partner's bank accounts"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Partner Bank Journal Scope Test Type"
+          code: "USGPBT03"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          usage_matching_method: "partner_bank"
+          account_mapping_ids:
+            - - 0
+              - 0
+              - sequence: 10
+                usage_id: "REC: usage_a.id"
+                account_id: "REC: account_a.id"
+
+      - step: "Create import document without any header account"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create the row paid from the partner's Bank A account"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-07-10", "account_number": "8300000005", "amount": "70000"}'
+
+      - step: "Process the row"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+
+      - step:
+          "Assert the payment resolved to the same-bank usage's account, proving the
+          other bank's account was excluded rather than causing an ambiguity error"
+        action: "assert"
+        target: "data_line"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          payment_id.destination_account_id:
+            type: "m2o"
+            expected: "REC: account_a.id"
+
+  - name:
+      "Customer Payment Import - Usage Matching Method 'partner_bank' falls back to the
+      header account when the matched partner has no usage-carrying bank account"
+    steps:
+      - step: "Create the receivable account used on the document header"
+        action: "create"
+        model: "account.account"
+        save_as: "account_header"
+        values:
+          name: "Piutang Header - Partner Bank No Usage"
+          code: "USGPB04"
+          user_type_id: "REF: account.data_account_type_receivable"
+          reconcile: true
+
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Partner Bank No Usage Partner"
+          is_company: true
+
+      - step: "Create the partner's only bank account, without any usage configured"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "8300000007"
+          partner_id: "REC: partner.id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Partner Bank No Usage"
+          type: "bank"
+
+      - step: "Create type resolving usage from the matched partner's bank accounts"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Partner Bank No Usage Test Type"
+          code: "USGPBT04"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          usage_matching_method: "partner_bank"
+
+      - step: "Create import document carrying a header account"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+          account_id: "REC: account_header.id"
+
+      - step: "Create the row paid from the usage-less bank account"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-07-11", "account_number": "8300000007", "amount": "55000"}'
+
+      - step: "Process the row"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+
+      - step: "Assert the row still resolved, using the header account"
+        action: "assert"
+        target: "data_line"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          payment_id.destination_account_id:
+            type: "m2o"
+            expected: "REC: account_header.id"
+
+  - name:
+      "Customer Payment Import Data - Usage Matching Method 'partner_bank' raises when
+      the matched partner's bank accounts carry two mapped usages"
+    steps:
+      - step: "Create the account mapped to the first usage"
+        action: "create"
+        model: "account.account"
+        save_as: "account_a"
+        values:
+          name: "Piutang Enrollment - Partner Bank Ambiguous A"
+          code: "USGPB05"
+          user_type_id: "REF: account.data_account_type_receivable"
+          reconcile: true
+
+      - step: "Create the account mapped to the second usage"
+        action: "create"
+        model: "account.account"
+        save_as: "account_b"
+        values:
+          name: "Piutang Admission - Partner Bank Ambiguous B"
+          code: "USGPB06"
+          user_type_id: "REF: account.data_account_type_receivable"
+          reconcile: true
+
+      - step: "Create the first usage"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_a"
+        values:
+          name: "Uang Sekolah - Partner Bank Ambiguous A"
+          code: "USGPBU05"
+
+      - step: "Create the second usage"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_b"
+        values:
+          name: "Uang Pangkal - Partner Bank Ambiguous B"
+          code: "USGPBU06"
+
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Partner Bank Ambiguous Partner"
+          is_company: true
+
+      - step: "Create the partner's first bank account, carrying the first usage"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank_a"
+        values:
+          acc_number: "8300000008"
+          partner_id: "REC: partner.id"
+          usage_id: "REC: usage_a.id"
+
+      - step: "Create the partner's second bank account, carrying the second usage"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank_b"
+        values:
+          acc_number: "8300000009"
+          partner_id: "REC: partner.id"
+          usage_id: "REC: usage_b.id"
+
+      - step:
+          "Create bank journal, its own bank left unset so neither account is excluded
+          by bank"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Partner Bank Ambiguous"
+          type: "bank"
+
+      - step: "Create type mapping both usages to different accounts"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Partner Bank Ambiguous Test Type"
+          code: "USGPBT05"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          usage_matching_method: "partner_bank"
+          account_mapping_ids:
+            - - 0
+              - 0
+              - sequence: 10
+                usage_id: "REC: usage_a.id"
+                account_id: "REC: account_a.id"
+            - - 0
+              - 0
+              - sequence: 20
+                usage_id: "REC: usage_b.id"
+                account_id: "REC: account_b.id"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create the row paid from the partner's first bank account"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-07-12", "account_number": "8300000008", "amount": "40000"}'
+
+      - step: "Process the row, expect it to raise on the ambiguous usage"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+        expect_error:
+          type: "UserError"
+          message_contains: "more than"
+
+  - name:
+      "Customer Payment Import Data - Usage Matching Method 'partner_bank' raises even
+      when only one of the matched partner's two usages is mapped"
+    steps:
+      - step:
+          "Create the account mapped to the mapped usage -- proves
+          _get_usage_bank_candidates does not narrow candidates by account_mapping_ids:
+          if it did, the unmapped usage's account would simply be dropped instead of
+          raising"
+        action: "create"
+        model: "account.account"
+        save_as: "account_a"
+        values:
+          name: "Piutang Enrollment - Partner Bank Half Mapped"
+          code: "USGPB07"
+          user_type_id: "REF: account.data_account_type_receivable"
+          reconcile: true
+
+      - step: "Create the mapped usage"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_a"
+        values:
+          name: "Uang Sekolah - Partner Bank Half Mapped"
+          code: "USGPBU07"
+
+      - step: "Create the usage left unmapped on the Type"
+        action: "create"
+        model: "res_partner_bank_usage"
+        save_as: "usage_b"
+        values:
+          name: "Uang Pangkal - Partner Bank Half Mapped"
+          code: "USGPBU08"
+
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Partner Bank Half Mapped Partner"
+          is_company: true
+
+      - step: "Create the partner's first bank account, carrying the mapped usage"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank_a"
+        values:
+          acc_number: "8300000010"
+          partner_id: "REC: partner.id"
+          usage_id: "REC: usage_a.id"
+
+      - step:
+          "Create the partner's second bank account, carrying the usage left unmapped on
+          the Type"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank_b"
+        values:
+          acc_number: "8300000011"
+          partner_id: "REC: partner.id"
+          usage_id: "REC: usage_b.id"
+
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Partner Bank Half Mapped"
+          type: "bank"
+
+      - step: "Create type mapping only the first usage"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Partner Bank Half Mapped Test Type"
+          code: "USGPBT06"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          usage_matching_method: "partner_bank"
+          account_mapping_ids:
+            - - 0
+              - 0
+              - sequence: 10
+                usage_id: "REC: usage_a.id"
+                account_id: "REC: account_a.id"
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create the row paid from the partner's first bank account"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "data_line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-07-13", "account_number": "8300000010", "amount": "45000"}'
+
+      - step:
+          "Process the row, expect it to raise even though only one of the two usages is
+          mapped"
+        action: "call"
+        target: "data_line"
+        method: "_process_payment"
+        expect_error:
+          type: "UserError"
+          message_contains: "more than"
