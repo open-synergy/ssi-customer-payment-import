@@ -19,8 +19,9 @@ class CustomerPaymentImport(models.Model):
     pattern used there for ``account.move`` (``models/account_move.py``),
     minus its replacement-journal self-heal — here the journal is only
     cleared, and the user re-selects manually. The resulting
-    ``account.payment`` is out of scope for this module; only
-    ``journal_id`` selection on the import document itself is guarded.
+    ``account.payment`` gets this document's ``operating_unit_id``
+    propagated onto it too, by ``CustomerPaymentImportData._prepare_
+    payment_data`` (``models/customer_payment_import_data.py``).
     """
 
     _name = "customer_payment_import"

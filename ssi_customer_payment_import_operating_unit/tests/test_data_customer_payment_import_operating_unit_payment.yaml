@@ -1,0 +1,355 @@
+options:
+  auto_refresh: true
+
+scenarios:
+  - name: "Customer Payment Import - Payment Operating Unit propagation"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner_prop_a"
+        values:
+          name: "OU Propagation Partner A"
+          is_company: true
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank_prop_a"
+        values:
+          acc_number: "6666666601"
+          partner_id: "REC: partner_prop_a.id"
+
+      - step: "Create operating unit A (the import document's OU)"
+        action: "create"
+        model: "operating.unit"
+        save_as: "ou_prop_a"
+        values:
+          name: "OU Propagation Test A"
+          code: "OUPA1"
+          partner_id: "REF: base.main_partner"
+
+      - step: "Create operating unit B (the approving user's default OU)"
+        action: "create"
+        model: "operating.unit"
+        save_as: "ou_prop_b"
+        values:
+          name: "OU Propagation Test B"
+          code: "OUPB1"
+          partner_id: "REF: base.main_partner"
+
+      - step: "Get Administrator user"
+        action: "ref"
+        xml_id: "base.user_admin"
+        save_as: "user_admin"
+
+      - step: "Give Administrator a default OU different from OU A"
+        # This is the crux of the propagation proof: whoever ends up
+        # running `_run_process_payment` (here: Administrator,
+        # approving the import synchronously below) must NOT be the
+        # source of the payment's Operating Unit. Running the whole
+        # scenario with the approver's default OU equal to OU A would
+        # pass even without the fix in place (see the negative note
+        # on the Design Decision / issue #52 Skenario Uji).
+        action: "write"
+        target: "user_admin"
+        values:
+          default_operating_unit_id: "REC: ou_prop_b.id"
+
+      - step: "Create bank journal scoped to operating unit A"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal_prop_a"
+        values:
+          name: "OU Propagation Journal A"
+          type: "bank"
+          operating_unit_ids:
+            - - 6
+              - 0
+              - - "REC: ou_prop_a.id"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype_prop_a"
+        values:
+          name: "OU Propagation Test Type A"
+          code: "OUPPA01"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          communication_column: "description"
+          journal_selection_method: "domain"
+          journal_domain:
+            'EVAL: "[(''id'', ''='', %d)]" % registry[''journal_prop_a''].id'
+
+      - step: "Create import document with operating_unit_id = OU A"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_prop_a"
+        as_user: "base.user_admin"
+        values:
+          type_id: "REC: ctype_prop_a.id"
+          journal_id: "REC: journal_prop_a.id"
+          operating_unit_id: "REC: ou_prop_a.id"
+
+      - step: "Create data line manually (bypass file parsing)"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line_prop_a"
+        values:
+          import_id: "REC: import_prop_a.id"
+          sequence: 1
+          data:
+            '{"date": "2026-02-10", "account_number": "6666666601", "amount": "222000",
+            "description": "OU Propagation Test A"}'
+
+      - step: "Confirm import"
+        action: "call"
+        target: "import_prop_a"
+        method: "action_confirm"
+        as_user: "base.user_admin"
+        refresh: true
+
+      - step: "Assert state confirm"
+        action: "assert"
+        target: "import_prop_a"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "confirm"
+
+      - step: "Approve import as Administrator (auto queue_done, synchronous job)"
+        # Administrator's default_operating_unit_id is OU B (set above),
+        # not OU A -- the payment's Operating Unit must still come out
+        # as OU A, proving propagation does not fall back to whoever
+        # runs the queue job.
+        action: "call"
+        target: "import_prop_a"
+        method: "action_approve_approval"
+        as_user: "base.user_admin"
+        refresh: true
+        context:
+          queue_job__no_delay: true
+
+      - step: "Assert state done"
+        action: "assert"
+        target: "import_prop_a"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+
+      - step: "Get created payment"
+        action: "search"
+        model: "account.payment"
+        domain:
+          - ["partner_id", "=", "REC: partner_prop_a.id"]
+          - ["journal_id", "=", "REC: journal_prop_a.id"]
+        save_as: "payment_prop_a"
+        limit: 1
+
+      - step:
+          "Assert payment Operating Unit matches the import document's, not the
+          approver's"
+        action: "assert"
+        target: "payment_prop_a"
+        asserts:
+          operating_unit_id:
+            type: "m2o"
+            expected: "REC: ou_prop_a"
+
+  - name: "Customer Payment Import - Payment without OU when the document has none"
+    steps:
+      - step: "Create partner"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner_prop_none"
+        values:
+          name: "OU Propagation Partner None"
+          is_company: true
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank_prop_none"
+        values:
+          acc_number: "6666666602"
+          partner_id: "REC: partner_prop_none.id"
+
+      - step: "Create bank journal without operating unit restriction"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal_prop_none"
+        values:
+          name: "OU Propagation Journal None"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype_prop_none"
+        values:
+          name: "OU Propagation Test Type None"
+          code: "OUPPN01"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          communication_column: "description"
+          journal_selection_method: "domain"
+          journal_domain:
+            'EVAL: "[(''id'', ''='', %d)]" % registry[''journal_prop_none''].id'
+
+      - step: "Create import document without operating_unit_id"
+        # `operating_unit_id: false` is passed explicitly to bypass
+        # `mixin.single_operating_unit`'s default (which would
+        # otherwise fill it from Administrator's default OU -- OU B,
+        # set by the scenario above, still in effect here since
+        # scenarios in one file share a transaction). The document
+        # must end up with NO Operating Unit, on purpose.
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_prop_none"
+        as_user: "base.user_admin"
+        values:
+          type_id: "REC: ctype_prop_none.id"
+          journal_id: "REC: journal_prop_none.id"
+          operating_unit_id: false
+
+      - step: "Assert document Operating Unit is empty"
+        action: "assert"
+        target: "import_prop_none"
+        asserts:
+          operating_unit_id:
+            type: "value"
+            operator: "is_falsy"
+
+      - step: "Create data line manually (bypass file parsing)"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line_prop_none"
+        values:
+          import_id: "REC: import_prop_none.id"
+          sequence: 1
+          data:
+            '{"date": "2026-02-11", "account_number": "6666666602", "amount": "111000",
+            "description": "OU Propagation Test None"}'
+
+      - step: "Confirm import"
+        action: "call"
+        target: "import_prop_none"
+        method: "action_confirm"
+        as_user: "base.user_admin"
+        refresh: true
+
+      - step: "Assert state confirm"
+        action: "assert"
+        target: "import_prop_none"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "confirm"
+
+      - step: "Approve import as Administrator (default OU B, auto queue_done)"
+        action: "call"
+        target: "import_prop_none"
+        method: "action_approve_approval"
+        as_user: "base.user_admin"
+        refresh: true
+        context:
+          queue_job__no_delay: true
+
+      - step: "Assert state done"
+        action: "assert"
+        target: "import_prop_none"
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+
+      - step: "Get created payment"
+        action: "search"
+        model: "account.payment"
+        domain:
+          - ["partner_id", "=", "REC: partner_prop_none.id"]
+          - ["journal_id", "=", "REC: journal_prop_none.id"]
+        save_as: "payment_prop_none"
+        limit: 1
+
+      - step: "Assert payment has no Operating Unit (not Administrator's OU B)"
+        action: "assert"
+        target: "payment_prop_none"
+        asserts:
+          operating_unit_id:
+            type: "value"
+            operator: "is_falsy"
+
+  - name:
+      "Customer Payment Import - mismatched OU/journal still rejected at document level"
+    steps:
+      - step: "Create operating unit C"
+        action: "create"
+        model: "operating.unit"
+        save_as: "ou_prop_c"
+        values:
+          name: "OU Propagation Test C"
+          code: "OUPC1"
+          partner_id: "REF: base.main_partner"
+
+      - step: "Create operating unit D"
+        action: "create"
+        model: "operating.unit"
+        save_as: "ou_prop_d"
+        values:
+          name: "OU Propagation Test D"
+          code: "OUPD1"
+          partner_id: "REF: base.main_partner"
+
+      - step: "Create bank journal scoped to operating unit C"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal_prop_c"
+        values:
+          name: "OU Propagation Journal C"
+          type: "bank"
+          operating_unit_ids:
+            - - 6
+              - 0
+              - - "REC: ou_prop_c.id"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype_prop_mismatch"
+        values:
+          name: "OU Propagation Test Type Mismatch"
+          code: "OUPPM01"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          journal_selection_method: "manual"
+          journal_ids:
+            - - 6
+              - 0
+              - - "REC: journal_prop_c.id"
+
+      - step: "Document with OU D against a journal scoped to OU C is rejected"
+        # Proves the existing `_check_journal_operating_unit` gate on
+        # `customer_payment_import` (models/customer_payment_import.py)
+        # still fires -- the payment-propagation override added by
+        # this module only touches `_prepare_payment_data`, and must
+        # not weaken this pre-existing document-level gate.
+        action: "create"
+        model: "customer_payment_import"
+        as_user: "base.user_admin"
+        expect_error:
+          type: "UserError"
+          message_contains: "does not match Journal"
+        values:
+          type_id: "REC: ctype_prop_mismatch.id"
+          journal_id: "REC: journal_prop_c.id"
+          operating_unit_id: "REC: ou_prop_d.id"

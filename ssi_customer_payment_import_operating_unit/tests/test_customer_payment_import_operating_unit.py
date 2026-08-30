@@ -14,10 +14,27 @@ class TestCustomerPaymentImportOperatingUnit(YamlTransactionCase):
     Covers ``operating_unit_id`` propagation/defaulting, the
     ``allowed_journal_ids`` Operating Unit filter on both saved
     records and unsaved (``NewId``) Form records, the onchange that
-    clears a mismatched ``journal_id``, and the
-    ``_check_journal_operating_unit`` data-level constraint.
+    clears a mismatched ``journal_id``, the
+    ``_check_journal_operating_unit`` data-level constraint, and (in
+    ``test_customer_payment_import_operating_unit_payment``) the
+    propagation of that Operating Unit onto the ``account.payment``
+    created from a data line.
     """
 
     def test_customer_payment_import_operating_unit(self):
         """Run all Operating Unit scenarios for ``customer_payment_import``."""
         self.run_yaml_scenario("test_data_customer_payment_import_operating_unit.yaml")
+
+    def test_customer_payment_import_operating_unit_payment(self):
+        """Run the ``account.payment`` Operating Unit propagation scenarios.
+
+        Separate YAML file (T-01): these scenarios create their own
+        ``customer_payment_import_type``/``account.journal`` fixtures
+        and run the full confirm/approve workflow, which would collide
+        with the ``setup:``-free fixtures replayed by the scenarios in
+        ``test_data_customer_payment_import_operating_unit.yaml`` if
+        sharing one file.
+        """
+        self.run_yaml_scenario(
+            "test_data_customer_payment_import_operating_unit_payment.yaml"
+        )

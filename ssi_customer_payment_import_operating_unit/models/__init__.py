@@ -4,4 +4,5 @@
 
 from . import (
     customer_payment_import,
+    customer_payment_import_data,
 )
