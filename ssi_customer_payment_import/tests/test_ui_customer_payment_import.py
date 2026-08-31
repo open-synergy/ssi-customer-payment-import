@@ -90,6 +90,35 @@ class TestUiCustomerPaymentImport(HttpSavepointCase):
                 "global_use": True,
             }
         )
+        # Pre-Condition for docs/customer_payment_import/12-restart.md:
+        # status is Cancelled or Rejected. Rejected is reached through
+        # action_reject_approval, cheaper to set up than a full
+        # confirm/queue-cancel/queue-processing cycle to Cancelled.
+        cls.cpi_restart = cls.env["customer_payment_import"].create(
+            {
+                "name": "TOUR-CPI-RESTART",
+                "type_id": cls.cpi_type.id,
+                "journal_id": cls.journal.id,
+                "account_id": cls.account.id,
+                "user_id": cls.admin.id,
+            }
+        )
+        cls.cpi_restart.with_user(cls.admin).action_confirm()
+        # approval.approval records created by action_confirm() are read
+        # by action_reject_approval() in the same transaction, and the
+        # cached ``reject_ok`` policy value (computed while the record
+        # was still Draft, before any approver was assigned) would
+        # otherwise be reused -- invalidate the cache so it sees them
+        # (same pattern used by ssi_employee_external_assignment_
+        # agreement's test_ui_employee_external_assignment_agreement.py).
+        cls.cpi_restart.invalidate_cache()
+        cls.cpi_restart.with_user(cls.admin).action_reject_approval()
+        # ``_action_approval`` (ssi_multiple_approval_mixin) silently does
+        # nothing if the acting user is not an active approver -- assert
+        # the transition actually happened instead of trusting the call.
+        assert (
+            cls.cpi_restart.state == "reject"
+        ), "action_reject_approval() did not move TOUR-CPI-RESTART to reject"
 
     def test_create(self):
         """Run the create tour for ``customer_payment_import``.
@@ -132,5 +161,16 @@ class TestUiCustomerPaymentImport(HttpSavepointCase):
         self.start_tour(
             "/web",
             "ssi_customer_payment_import_customer_payment_import_cancel",
+            login="admin",
+        )
+
+    def test_restart(self):
+        """Run the restart tour for ``customer_payment_import``.
+
+        IK: docs/customer_payment_import/12-restart.md
+        """
+        self.start_tour(
+            "/web",
+            "ssi_customer_payment_import_customer_payment_import_restart",
             login="admin",
         )

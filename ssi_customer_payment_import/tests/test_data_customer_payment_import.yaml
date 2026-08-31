@@ -4214,3 +4214,179 @@ scenarios:
         expect_error:
           type: "UserError"
           message_contains: "more than"
+
+  - name:
+      "Customer Payment Import - Restart resets unresolved lines, keeps ignored and
+      payment-linked lines"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Restart"
+          type: "bank"
+
+      - step: "Create type"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Restart Test Type"
+          code: "RSTT001"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+
+      - step: "Create partner for the payment that is kept alive"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Restart Test Customer"
+          is_company: true
+
+      - step: "Create import document"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        as_user: "base.user_admin"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+
+      - step: "Create a done line with no payment (was cleared by a prior cancel)"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line_done_no_payment"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          state: "done"
+
+      - step: "Create an error line"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line_error"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 2
+          state: "error"
+          error_message: "Sample error"
+
+      - step: "Create an ignored line"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line_ignored"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 3
+          state: "ignored"
+          ignore_reason: "Sample ignore reason"
+
+      - step: "Create the payment kept alive for the last line"
+        action: "create"
+        model: "account.payment"
+        save_as: "kept_payment"
+        values:
+          payment_type: "inbound"
+          partner_type: "customer"
+          partner_id: "REC: partner.id"
+          journal_id: "REC: journal.id"
+          amount: 50000
+          date: 2026-08-01
+
+      - step: "Create a done line whose payment is still linked"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line_done_with_payment"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 4
+          state: "done"
+          payment_id: "REC: kept_payment.id"
+
+      - step: "Confirm the import"
+        action: "call"
+        target: "import_doc"
+        method: "action_confirm"
+        as_user: "base.user_admin"
+        # Both required: ``asserts`` RUNS ``_refresh``, ``refresh: true``
+        # ALLOWS it (``_should_refresh``) -- without this, ``reject_ok``
+        # is read stale from ``action_confirm`` (computed while still
+        # draft, before an approver was assigned), and Reject below
+        # fails NONDETERMINISTICALLY.
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "confirm"
+
+      - step: "Reject the import so action_restart is allowed"
+        action: "call"
+        target: "import_doc"
+        method: "action_reject_approval"
+        as_user: "base.user_admin"
+        # Same as above: ``restart_ok`` is read by ``action_restart``
+        # below, and without a refresh here it would still see the
+        # cache from the confirm state.
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "reject"
+
+      - step: "Restart the import"
+        action: "call"
+        target: "import_doc"
+        method: "action_restart"
+        as_user: "base.user_admin"
+
+      - step: "Assert import back to draft"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          state:
+            type: "value"
+            expected: "draft"
+
+      - step: "Assert the done-no-payment line was reset to draft"
+        action: "assert"
+        target: "line_done_no_payment"
+        asserts:
+          state:
+            type: "value"
+            expected: "draft"
+          error_message:
+            type: "value"
+            operator: "is_falsy"
+
+      - step: "Assert the error line was reset to draft"
+        action: "assert"
+        target: "line_error"
+        asserts:
+          state:
+            type: "value"
+            expected: "draft"
+          error_message:
+            type: "value"
+            operator: "is_falsy"
+
+      - step: "Assert the ignored line is untouched"
+        action: "assert"
+        target: "line_ignored"
+        asserts:
+          state:
+            type: "value"
+            expected: "ignored"
+
+      - step: "Assert the payment-linked done line is untouched"
+        action: "assert"
+        target: "line_done_with_payment"
+        asserts:
+          state:
+            type: "value"
+            expected: "done"
+          payment_id:
+            type: "m2o"
+            expected: "REC: kept_payment.id"

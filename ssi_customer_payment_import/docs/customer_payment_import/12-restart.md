@@ -27,4 +27,8 @@
 - Status returns to **Draft**.
 - All approval records are removed and the approval template is cleared. A later Confirm
   starts the approval process from the beginning.
-- Existing Import Data lines are not removed by the restart itself.
+- Existing Import Data lines are not removed by the restart itself. Lines whose status
+  is **Done** or **Error** and that have no linked Payment are reset to **Draft**, with
+  their Error Message cleared, so a later re-run processes them again. Lines already
+  **Ignored**, and any line that still has a linked Payment, keep their status
+  unchanged.

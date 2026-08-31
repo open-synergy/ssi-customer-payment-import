@@ -325,4 +325,55 @@ odoo.define("ssi_customer_payment_import.customer_payment_import_tour", function
             ]
         )
     );
+
+    // IK: docs/customer_payment_import/12-restart.md
+    tour.register(
+        "ssi_customer_payment_import_customer_payment_import_restart",
+        {
+            test: true,
+            url: "/web",
+        },
+        [].concat(
+            // ── Flow 1 — Open the menu.
+            openMenu(),
+            [
+                // ── Flow 2 — Open the record to restart.
+                {
+                    content: "Open the record",
+                    trigger:
+                        ".o_data_row:contains(TOUR-CPI-RESTART) .o_data_cell:first",
+                    extra_trigger: ".o_list_view",
+                },
+                {
+                    content: "Form is displayed",
+                    trigger: ".o_form_view",
+                    run: function () {
+                        // Assertion only.
+                    },
+                },
+                // ── Flow 3 — Click the Restart button.
+                {
+                    content: "Click the Restart button",
+                    trigger: ".o_statusbar_buttons button[name='action_restart']",
+                    extra_trigger: ".o_form_view",
+                },
+                // ── Flow 4 — Click OK on the confirmation dialog.
+                {
+                    content: "Confirm the dialog",
+                    trigger: ".modal-footer button.btn-primary",
+                    in_modal: true,
+                },
+                // ── Post-Condition — Status returns to Draft.
+                {
+                    content: "Status is Draft",
+                    trigger:
+                        ".o_statusbar_status .o_arrow_button[data-value='draft'].btn-primary",
+                    run: function () {
+                        // Assertion only -- do not click the current
+                        // state pill.
+                    },
+                },
+            ]
+        )
+    );
 });
