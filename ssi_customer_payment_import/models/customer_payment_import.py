@@ -351,16 +351,28 @@ Solution: Check the existing import or use a different file""" % (
     def _read_rows(self, file_content):
         """
         Return a list of row dicts (header/index -> value) read from
-        ``file_content``, honoring the Type's offset_row, no_header, and
-        skip_empty_lines settings.
+        ``file_content``, honoring the Type's offset_row,
+        trailing_offset_row, no_header, and skip_empty_lines settings.
+
+        Both offsets are counted on raw file rows: ``offset_row`` rows
+        are dropped from the top and ``trailing_offset_row`` rows are
+        dropped from the bottom, before header detection or
+        ``skip_empty_lines`` filtering runs. A ``trailing_offset_row``
+        of ``0`` never drops any row (guards against the ``list[:-0]``
+        pitfall, which would otherwise drop every row); a
+        ``trailing_offset_row`` at or beyond the number of raw rows
+        yields zero data lines instead of raising.
         """
         self.ensure_one()
         ctype = self.type_id
 
         if ctype.file_type == "xlsx":
-            raw_rows = self._iter_raw_rows_xlsx(file_content)
+            raw_rows = list(self._iter_raw_rows_xlsx(file_content))
         else:
-            raw_rows = self._iter_raw_rows_csv(file_content)
+            raw_rows = list(self._iter_raw_rows_csv(file_content))
+
+        if ctype.trailing_offset_row:
+            raw_rows = raw_rows[: -ctype.trailing_offset_row]
 
         rows = []
         headers = None

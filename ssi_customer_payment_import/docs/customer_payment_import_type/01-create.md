@@ -25,8 +25,8 @@
      account number, used to identify the paying customer.
    - **Amount Column**: column name containing the payment amount.
 4. On the **File Format** tab, review **Encoding**, **Delimiter**, **Text Qualifier**,
-   **Sheet Name**, **No Header Line**, **Skip Empty Lines**, and **Row Offset** to match
-   the bank file this type will parse.
+   **Sheet Name**, **No Header Line**, **Skip Empty Lines**, **Row Offset**, and
+   **Trailing Row Offset** to match the bank file this type will parse.
 5. On the **Column Mapping** tab, optionally fill in **Communication Column**, **Unique
    Reference Column**, **Exclude Column**, and **Exclude Values**.
 6. On the **Payment Option** tab, set **Auto Post** if the resulting customer payments

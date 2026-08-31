@@ -53,6 +53,7 @@
                         <field name="no_header" />
                         <field name="skip_empty_lines" />
                         <field name="offset_row" />
+                        <field name="trailing_offset_row" />
                     </group>
                 </page>
                 <page name="column_mapping" string="Column Mapping">
