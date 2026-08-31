@@ -437,6 +437,30 @@ Solution: Check the existing import or use a different file""" % (
                 description=_(description)
             )._cancel_payment()
 
+    @ssi_decorator.post_restart_action()
+    def _01_reset_data_on_restart(self):
+        """Reset unresolved data lines when the import is restarted.
+
+        ``ssi_decorator`` hook executed after the transition back to
+        ``draft``. A data line is reset to ``draft`` (with
+        ``error_message`` cleared) when its ``state`` is ``done`` or
+        ``error`` **and** it has no ``payment_id`` -- such a line was
+        left in an outcome state by a previous run without actually
+        producing a payment (e.g. ``action_cancel`` clears
+        ``payment_id`` on a ``done`` line, but leaves ``state``
+        untouched). Lines in ``ignored`` state, and any line that
+        still has a ``payment_id``, are left untouched so a live
+        payment is never duplicated.
+
+        :return: ``None``
+        """
+        self.ensure_one()
+        reset_data = self.data_ids.filtered(
+            lambda d: d.state in ("done", "error") and not d.payment_id
+        )
+        if reset_data:
+            reset_data.write({"state": "draft", "error_message": False})
+
     def action_retry_all_error(self):
         """Retry every errored data line of the selected imports.
 
