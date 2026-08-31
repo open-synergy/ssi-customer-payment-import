@@ -4491,7 +4491,7 @@ scenarios:
         values:
           type_id: "REC: ctype.id"
           journal_id: "REC: journal.id"
-          import_file: "ZGF0ZSxhY2NvdW50X251bWJlcixhbW91bnQsZGVzY3JpcHRpb24KMjAyNi0wNS0wMSwxMTExMTExMTExLDEwMDAwLFBheW1lbnQgUm93IE9uZQoyMDI2LTA1LTAyLDIyMjIyMjIyMjIsMjAwMDAsUGF5bWVudCBSb3cgVHdvCjIwMjYtMDUtMDMsMzMzMzMzMzMzMywzMDAwMCxQYXltZW50IFJvdyBUaHJlZQpGT09URVIsLDYwMDAwLFNhbGRvIEFraGlyCkZPT1RFUiwsMCxTaWduZWQgQnkgQnJhbmNoIE1hbmFnZXIK"
+          import_file: "ZGF0ZSxhY2NvdW50X251bWJlcixhbW91bnQsZGVzY3JpcHRpb24KMjAyNi0wNS0wMSw0NDQ0NDQ0NDQ0LDEwMDAwLFBheW1lbnQgUm93IE9uZQoyMDI2LTA1LTAyLDU1NTU1NTU1NTUsMjAwMDAsUGF5bWVudCBSb3cgVHdvCjIwMjYtMDUtMDMsNjY2NjY2NjY2NiwzMDAwMCxQYXltZW50IFJvdyBUaHJlZQpGT09URVIsLDYwMDAwLFNhbGRvIEFraGlyCkZPT1RFUiwsMCxTaWduZWQgQnkgQnJhbmNoIE1hbmFnZXIK"
           import_file_name: "trailing_offset_0.csv"
 
       - step: "Load data from CSV"
@@ -4543,7 +4543,7 @@ scenarios:
         values:
           type_id: "REC: ctype.id"
           journal_id: "REC: journal.id"
-          import_file: "ZGF0ZSxhY2NvdW50X251bWJlcixhbW91bnQsZGVzY3JpcHRpb24KMjAyNi0wNS0wMSwxMTExMTExMTExLDEwMDAwLFBheW1lbnQgUm93IE9uZQoyMDI2LTA1LTAyLDIyMjIyMjIyMjIsMjAwMDAsUGF5bWVudCBSb3cgVHdvCjIwMjYtMDUtMDMsMzMzMzMzMzMzMywzMDAwMCxQYXltZW50IFJvdyBUaHJlZQpGT09URVIsLDYwMDAwLFNhbGRvIEFraGlyCkZPT1RFUiwsMCxTaWduZWQgQnkgQnJhbmNoIE1hbmFnZXIK"
+          import_file: "ZGF0ZSxhY2NvdW50X251bWJlcixhbW91bnQsZGVzY3JpcHRpb24KMjAyNi0wNS0wMSw3Nzc3Nzc3Nzc3LDEwMDAwLFBheW1lbnQgUm93IE9uZQoyMDI2LTA1LTAyLDg4ODg4ODg4ODgsMjAwMDAsUGF5bWVudCBSb3cgVHdvCjIwMjYtMDUtMDMsOTk5OTk5OTk5OSwzMDAwMCxQYXltZW50IFJvdyBUaHJlZQpGT09URVIsLDYwMDAwLFNhbGRvIEFraGlyCkZPT1RFUiwsMCxTaWduZWQgQnkgQnJhbmNoIE1hbmFnZXIK"
           import_file_name: "trailing_offset_combined.csv"
 
       - step: "Load data from CSV"
@@ -4614,7 +4614,7 @@ scenarios:
         values:
           type_id: "REC: ctype.id"
           journal_id: "REC: journal.id"
-          import_file: "ZGF0ZSxhY2NvdW50X251bWJlcixhbW91bnQsZGVzY3JpcHRpb24KMjAyNi0wNS0wMSwxMTExMTExMTExLDEwMDAwLFBheW1lbnQgUm93IE9uZQoyMDI2LTA1LTAyLDIyMjIyMjIyMjIsMjAwMDAsUGF5bWVudCBSb3cgVHdvCjIwMjYtMDUtMDMsMzMzMzMzMzMzMywzMDAwMCxQYXltZW50IFJvdyBUaHJlZQpGT09URVIsLDYwMDAwLFNhbGRvIEFraGlyCkZPT1RFUiwsMCxTaWduZWQgQnkgQnJhbmNoIE1hbmFnZXIK"
+          import_file: "ZGF0ZSxhY2NvdW50X251bWJlcixhbW91bnQsZGVzY3JpcHRpb24KMjAyNi0wNS0wMSwxMjEyMTIxMjEyLDEwMDAwLFBheW1lbnQgUm93IE9uZQoyMDI2LTA1LTAyLDM0MzQzNDM0MzQsMjAwMDAsUGF5bWVudCBSb3cgVHdvCjIwMjYtMDUtMDMsNTY1NjU2NTY1NiwzMDAwMCxQYXltZW50IFJvdyBUaHJlZQpGT09URVIsLDYwMDAwLFNhbGRvIEFraGlyCkZPT1RFUiwsMCxTaWduZWQgQnkgQnJhbmNoIE1hbmFnZXIK"
           import_file_name: "trailing_offset_beyond.csv"
 
       - step: "Load data from CSV -- must not raise despite the oversized offset"
