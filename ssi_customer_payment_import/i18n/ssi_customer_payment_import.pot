@@ -153,6 +153,17 @@ msgid ""
 "\n"
 "Context: Saving customer payment import type\n"
 "Type: %s\n"
+"Problem: Trailing Row Offset is negative (%s)\n"
+"Solution: Set Trailing Row Offset to zero or a positive number"
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: code:addons/ssi_customer_payment_import/models/customer_payment_import_type.py:0
+#, python-format
+msgid ""
+"\n"
+"Context: Saving customer payment import type\n"
+"Type: %s\n"
 "Problem: Usage Matching Method is 'From Bank Account Column' but\n"
 "         Partner Bank Account Column is empty\n"
 "Solution: Fill in Partner Bank Account Column, or choose a different\n"
@@ -1329,6 +1340,14 @@ msgid "Number of messages with delivery error"
 msgstr ""
 
 #. module: ssi_customer_payment_import
+#: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__trailing_offset_row
+msgid ""
+"Number of rows to skip from the bottom of the file before parsing stops. "
+"Counted on raw file rows exactly like Row Offset, so blank rows and the "
+"header row are included in the count."
+msgstr ""
+
+#. module: ssi_customer_payment_import
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import_type__offset_row
 msgid "Number of rows to skip from the top before starting to parse."
 msgstr ""
@@ -1675,6 +1694,11 @@ msgstr ""
 #. module: ssi_customer_payment_import
 #: model:ir.model.fields,help:ssi_customer_payment_import.field_customer_payment_import__num_of_data
 msgid "Total number of import data lines."
+msgstr ""
+
+#. module: ssi_customer_payment_import
+#: model:ir.model.fields,field_description:ssi_customer_payment_import.field_customer_payment_import_type__trailing_offset_row
+msgid "Trailing Row Offset"
 msgstr ""
 
 #. module: ssi_customer_payment_import
