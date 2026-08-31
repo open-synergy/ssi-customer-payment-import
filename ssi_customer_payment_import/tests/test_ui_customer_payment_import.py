@@ -103,10 +103,22 @@ class TestUiCustomerPaymentImport(HttpSavepointCase):
                 "user_id": cls.admin.id,
             }
         )
-        cls.cpi_restart.action_confirm()
-        cls.cpi_restart.flush()
-        cls.cpi_restart.invalidate_cache(ids=cls.cpi_restart.ids)
-        cls.cpi_restart.action_reject_approval()
+        cls.cpi_restart.with_user(cls.admin).action_confirm()
+        # approval.approval records created by action_confirm() are read
+        # by action_reject_approval() in the same transaction, and the
+        # cached ``reject_ok`` policy value (computed while the record
+        # was still Draft, before any approver was assigned) would
+        # otherwise be reused -- invalidate the cache so it sees them
+        # (same pattern used by ssi_employee_external_assignment_
+        # agreement's test_ui_employee_external_assignment_agreement.py).
+        cls.cpi_restart.invalidate_cache()
+        cls.cpi_restart.with_user(cls.admin).action_reject_approval()
+        # ``_action_approval`` (ssi_multiple_approval_mixin) silently does
+        # nothing if the acting user is not an active approver -- assert
+        # the transition actually happened instead of trusting the call.
+        assert (
+            cls.cpi_restart.state == "reject"
+        ), "action_reject_approval() did not move TOUR-CPI-RESTART to reject"
 
     def test_create(self):
         """Run the create tour for ``customer_payment_import``.

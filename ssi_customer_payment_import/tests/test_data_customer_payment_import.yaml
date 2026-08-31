@@ -4250,6 +4250,7 @@ scenarios:
         action: "create"
         model: "customer_payment_import"
         save_as: "import_doc"
+        as_user: "base.user_admin"
         values:
           type_id: "REC: ctype.id"
           journal_id: "REC: journal.id"
@@ -4310,16 +4311,26 @@ scenarios:
         target: "import_doc"
         method: "action_confirm"
         as_user: "base.user_admin"
+        # Both required: ``asserts`` RUNS ``_refresh``, ``refresh: true``
+        # ALLOWS it (``_should_refresh``) -- without this, ``reject_ok``
+        # is read stale from ``action_confirm`` (computed while still
+        # draft, before an approver was assigned), and Reject below
+        # fails NONDETERMINISTICALLY.
+        refresh: true
+        asserts:
+          state:
+            type: "value"
+            expected: "confirm"
 
       - step: "Reject the import so action_restart is allowed"
         action: "call"
         target: "import_doc"
         method: "action_reject_approval"
         as_user: "base.user_admin"
-
-      - step: "Assert import is rejected"
-        action: "assert"
-        target: "import_doc"
+        # Same as above: ``restart_ok`` is read by ``action_restart``
+        # below, and without a refresh here it would still see the
+        # cache from the confirm state.
+        refresh: true
         asserts:
           state:
             type: "value"
