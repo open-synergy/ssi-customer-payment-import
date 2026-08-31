@@ -82,6 +82,16 @@ class CustomerPaymentImportType(models.Model):
         default=0,
         help="Number of rows to skip from the top before starting to parse.",
     )
+    trailing_offset_row = fields.Integer(
+        string="Trailing Row Offset",
+        default=0,
+        help=(
+            "Number of rows to skip from the bottom of the file before "
+            "parsing stops. Counted on raw file rows exactly like Row "
+            "Offset, so blank rows and the header row are included in "
+            "the count."
+        ),
+    )
     sheet_name = fields.Char(
         string="Sheet Name",
         help=(
@@ -414,6 +424,36 @@ Solution: Configure two different separators, or set the unused one
         if self.amount_format != "manual":
             return True
         return self.amount_thousand_separator != self.amount_decimal_separator
+
+    @api.constrains("trailing_offset_row")
+    def _check_trailing_offset_row(self):
+        """Reject a negative Trailing Row Offset.
+
+        Raises ``ValidationError`` when
+        ``_check_trailing_offset_row_condition`` fails.
+        """
+        for record in self:
+            if not record._check_trailing_offset_row_condition():
+                error_message = (
+                    _(
+                        """
+Context: Saving customer payment import type
+Type: %s
+Problem: Trailing Row Offset is negative (%s)
+Solution: Set Trailing Row Offset to zero or a positive number"""
+                    )
+                    % (record.display_name, record.trailing_offset_row)
+                )
+                raise ValidationError(error_message)
+
+    def _check_trailing_offset_row_condition(self):
+        """Return whether this Type's Trailing Row Offset is valid.
+
+        :return: ``False`` when ``trailing_offset_row`` is negative;
+            ``True`` otherwise
+        """
+        self.ensure_one()
+        return self.trailing_offset_row >= 0
 
     @api.constrains("partner_matching_method", "partner_bank_account_column")
     def _check_partner_matching_method(self):

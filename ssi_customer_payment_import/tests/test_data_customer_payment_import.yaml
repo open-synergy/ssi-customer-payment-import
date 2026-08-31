@@ -4390,3 +4390,262 @@ scenarios:
           payment_id:
             type: "m2o"
             expected: "REC: kept_payment.id"
+
+  - name:
+      "Customer Payment Import - trailing_offset_row drops footer rows before parsing"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Trailing Offset"
+          type: "bank"
+
+      - step: "Create type with trailing_offset_row=2"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Trailing Offset Test Type"
+          code: "TRLO001"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          communication_column: "description"
+          trailing_offset_row: 2
+
+      - step: "Create import document with CSV file (3 data rows + 2 footer rows)"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        as_user: "base.user_admin"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+          import_file: "ZGF0ZSxhY2NvdW50X251bWJlcixhbW91bnQsZGVzY3JpcHRpb24KMjAyNi0wNS0wMSwxMTExMTExMTExLDEwMDAwLFBheW1lbnQgUm93IE9uZQoyMDI2LTA1LTAyLDIyMjIyMjIyMjIsMjAwMDAsUGF5bWVudCBSb3cgVHdvCjIwMjYtMDUtMDMsMzMzMzMzMzMzMywzMDAwMCxQYXltZW50IFJvdyBUaHJlZQpGT09URVIsLDYwMDAwLFNhbGRvIEFraGlyCkZPT1RFUiwsMCxTaWduZWQgQnkgQnJhbmNoIE1hbmFnZXIK"
+          import_file_name: "trailing_offset_2.csv"
+
+      - step: "Load data from CSV"
+        action: "call"
+        target: "import_doc"
+        method: "action_load_data"
+
+      - step: "Assert exactly three data lines were created (footer rows dropped)"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          data_ids:
+            type: "o2m"
+            check: "count"
+            expected_count: 3
+
+      - step: "Verify no data line contains the first footer row's text"
+        action: "search"
+        model: "customer_payment_import.data"
+        domain:
+          - ["import_id", "=", "REC: import_doc.id"]
+          - ["data", "like", "Saldo Akhir"]
+        save_as: "footer_line_one"
+        expect_count: 0
+
+      - step: "Verify no data line contains the second footer row's text"
+        action: "search"
+        model: "customer_payment_import.data"
+        domain:
+          - ["import_id", "=", "REC: import_doc.id"]
+          - ["data", "like", "Signed By Branch Manager"]
+        save_as: "footer_line_two"
+        expect_count: 0
+
+  - name:
+      "Customer Payment Import - trailing_offset_row=0 does not drop the last row
+      (regression guard for the list[:-0] pitfall)"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Trailing Offset Zero"
+          type: "bank"
+
+      - step: "Create type with trailing_offset_row=0"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Trailing Offset Zero Test Type"
+          code: "TRLO002"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          communication_column: "description"
+          trailing_offset_row: 0
+
+      - step: "Create import document with the same CSV file as above"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        as_user: "base.user_admin"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+          import_file: "ZGF0ZSxhY2NvdW50X251bWJlcixhbW91bnQsZGVzY3JpcHRpb24KMjAyNi0wNS0wMSw0NDQ0NDQ0NDQ0LDEwMDAwLFBheW1lbnQgUm93IE9uZQoyMDI2LTA1LTAyLDU1NTU1NTU1NTUsMjAwMDAsUGF5bWVudCBSb3cgVHdvCjIwMjYtMDUtMDMsNjY2NjY2NjY2NiwzMDAwMCxQYXltZW50IFJvdyBUaHJlZQpGT09URVIsLDYwMDAwLFNhbGRvIEFraGlyCkZPT1RFUiwsMCxTaWduZWQgQnkgQnJhbmNoIE1hbmFnZXIK"
+          import_file_name: "trailing_offset_0.csv"
+
+      - step: "Load data from CSV"
+        action: "call"
+        target: "import_doc"
+        method: "action_load_data"
+
+      - step:
+          "Assert all five non-header rows became data lines (both footer rows included,
+          since trailing_offset_row=0 must not slice anything off)"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          data_ids:
+            type: "o2m"
+            check: "count"
+            expected_count: 5
+
+  - name:
+      "Customer Payment Import - offset_row and trailing_offset_row combined both apply"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Offset Combined"
+          type: "bank"
+
+      - step: "Create type with offset_row=2 and trailing_offset_row=1"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Offset Combined Test Type"
+          code: "TRLO003"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          communication_column: "description"
+          offset_row: 2
+          trailing_offset_row: 1
+
+      - step: "Create import document with the same CSV file as above"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        as_user: "base.user_admin"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+          import_file: "ZGF0ZSxhY2NvdW50X251bWJlcixhbW91bnQsZGVzY3JpcHRpb24KMjAyNi0wNS0wMSw3Nzc3Nzc3Nzc3LDEwMDAwLFBheW1lbnQgUm93IE9uZQoyMDI2LTA1LTAyLDg4ODg4ODg4ODgsMjAwMDAsUGF5bWVudCBSb3cgVHdvCjIwMjYtMDUtMDMsOTk5OTk5OTk5OSwzMDAwMCxQYXltZW50IFJvdyBUaHJlZQpGT09URVIsLDYwMDAwLFNhbGRvIEFraGlyCkZPT1RFUiwsMCxTaWduZWQgQnkgQnJhbmNoIE1hbmFnZXIK"
+          import_file_name: "trailing_offset_combined.csv"
+
+      - step: "Load data from CSV"
+        action: "call"
+        target: "import_doc"
+        method: "action_load_data"
+
+      - step:
+          "Assert only the middle rows remain: 6 raw rows, minus 1 trailing row and
+          minus (2 leading rows consumed by offset_row, one of which becomes the new
+          header row), leaves 2 data lines"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          data_ids:
+            type: "o2m"
+            check: "count"
+            expected_count: 2
+
+      - step: "Verify the trailing-trimmed second footer row is absent"
+        action: "search"
+        model: "customer_payment_import.data"
+        domain:
+          - ["import_id", "=", "REC: import_doc.id"]
+          - ["data", "like", "Signed By Branch Manager"]
+        save_as: "footer_line_two"
+        expect_count: 0
+
+      - step: "Verify the offset-trimmed first transaction row is absent"
+        action: "search"
+        model: "customer_payment_import.data"
+        domain:
+          - ["import_id", "=", "REC: import_doc.id"]
+          - ["data", "like", "Payment Row One"]
+        save_as: "offset_line_one"
+        expect_count: 0
+
+  - name:
+      "Customer Payment Import - trailing_offset_row at or beyond the raw row count
+      yields zero data lines"
+    steps:
+      - step: "Create bank journal"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Trailing Offset Beyond"
+          type: "bank"
+
+      - step: "Create type with trailing_offset_row larger than the file's row count"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Trailing Offset Beyond Test Type"
+          code: "TRLO004"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          communication_column: "description"
+          trailing_offset_row: 10
+
+      - step: "Create import document with the same 6-raw-row CSV file"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        as_user: "base.user_admin"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+          import_file: "ZGF0ZSxhY2NvdW50X251bWJlcixhbW91bnQsZGVzY3JpcHRpb24KMjAyNi0wNS0wMSwxMjEyMTIxMjEyLDEwMDAwLFBheW1lbnQgUm93IE9uZQoyMDI2LTA1LTAyLDM0MzQzNDM0MzQsMjAwMDAsUGF5bWVudCBSb3cgVHdvCjIwMjYtMDUtMDMsNTY1NjU2NTY1NiwzMDAwMCxQYXltZW50IFJvdyBUaHJlZQpGT09URVIsLDYwMDAwLFNhbGRvIEFraGlyCkZPT1RFUiwsMCxTaWduZWQgQnkgQnJhbmNoIE1hbmFnZXIK"
+          import_file_name: "trailing_offset_beyond.csv"
+
+      - step: "Load data from CSV -- must not raise despite the oversized offset"
+        action: "call"
+        target: "import_doc"
+        method: "action_load_data"
+
+      - step: "Assert the document was saved and has zero data lines"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          id:
+            type: "value"
+            operator: "is_truthy"
+          data_ids:
+            type: "o2m"
+            check: "count"
+            expected_count: 0
+
+  - name: "Customer Payment Import Type - Negative trailing_offset_row is rejected"
+    steps:
+      - step: "Creating a type with a negative Trailing Row Offset is rejected"
+        action: "create"
+        model: "customer_payment_import_type"
+        values:
+          name: "Negative Trailing Offset Test Type"
+          code: "TRLO005"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          trailing_offset_row: -1
+        expect_error:
+          type: "ValidationError"
+          message_contains: "Trailing Row Offset"

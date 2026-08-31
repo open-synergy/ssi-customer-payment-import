@@ -12,6 +12,7 @@
     <field name="no_header" eval="0" />
     <field name="skip_empty_lines" eval="1" />
     <field name="offset_row">0</field>
+    <field name="trailing_offset_row">0</field>
     <field name="date_column">date</field>
     <field name="date_format">%Y-%m-%d</field>
     <field name="partner_bank_account_column">account_number</field>
