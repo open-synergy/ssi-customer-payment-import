@@ -4649,3 +4649,269 @@ scenarios:
         expect_error:
           type: "ValidationError"
           message_contains: "Trailing Row Offset"
+
+  - name:
+      "Customer Payment Import - Queue To Cancel releases only the cancelled payment's
+      reconciliation"
+    steps:
+      - step: "Create reconcilable receivable account"
+        action: "create"
+        model: "account.account"
+        save_as: "account_receivable"
+        values:
+          name: "Piutang Cancel Release"
+          code: "CNCLR01"
+          user_type_id: "REF: account.data_account_type_receivable"
+          reconcile: true
+
+      - step: "Create income account"
+        action: "create"
+        model: "account.account"
+        save_as: "account_income"
+        values:
+          name: "Pendapatan Cancel Release"
+          code: "CNCLR02"
+          user_type_id: "REF: account.data_account_type_revenue"
+
+      - step: "Create partner using the receivable account"
+        action: "create"
+        model: "res.partner"
+        save_as: "partner"
+        values:
+          name: "Test Import Customer Release"
+          is_company: true
+          property_account_receivable_id: "REC: account_receivable.id"
+
+      - step: "Create partner bank account"
+        action: "create"
+        model: "res.partner.bank"
+        save_as: "partner_bank"
+        values:
+          acc_number: "7100000001"
+          partner_id: "REC: partner.id"
+
+      - step: "Create bank journal for the manual payment"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal_manual"
+        values:
+          name: "Test Bank Journal Release Manual"
+          type: "bank"
+
+      - step: "Create bank journal for the import"
+        action: "create"
+        model: "account.journal"
+        save_as: "journal"
+        values:
+          name: "Test Bank Journal Release Import"
+          type: "bank"
+
+      - step: "Create customer invoice of 300000"
+        action: "create"
+        model: "account.move"
+        save_as: "invoice"
+        values:
+          move_type: "out_invoice"
+          partner_id: "REC: partner.id"
+          invoice_line_ids:
+            - - 0
+              - 0
+              - name: "Cancel release line"
+                quantity: 1
+                price_unit: 300000
+                account_id: "REC: account_income.id"
+
+      - step: "Post the invoice"
+        action: "call"
+        target: "invoice"
+        method: "action_post"
+        asserts:
+          state:
+            type: "value"
+            expected: "posted"
+          amount_residual:
+            type: "value"
+            expected: 300000
+
+      - step: "Create a manual payment of 100000 outside the import"
+        action: "create"
+        model: "account.payment"
+        save_as: "manual_payment"
+        values:
+          payment_type: "inbound"
+          partner_type: "customer"
+          partner_id: "REC: partner.id"
+          journal_id: "REC: journal_manual.id"
+          amount: 100000
+
+      - step: "Post the manual payment"
+        action: "call"
+        target: "manual_payment"
+        method: "action_post"
+        asserts:
+          state:
+            type: "value"
+            expected: "posted"
+
+      - step: "Find the receivable line of the manual payment"
+        action: "search"
+        model: "account.move.line"
+        domain:
+          - ["move_id", "=", "EVAL: registry['manual_payment'].move_id.id"]
+          - ["account_id", "=", "REC: account_receivable.id"]
+        save_as: "manual_line"
+        limit: 1
+
+      - step: "Reconcile the manual payment to the invoice"
+        action: "call"
+        target: "invoice"
+        method: "js_assign_outstanding_line"
+        args:
+          - "REC: manual_line.id"
+        asserts:
+          amount_residual:
+            type: "value"
+            expected: 200000
+
+      - step: "Create type (auto_post true)"
+        action: "create"
+        model: "customer_payment_import_type"
+        save_as: "ctype"
+        values:
+          name: "Workflow Type Cancel Release"
+          code: "CNCL001"
+          date_column: "date"
+          partner_bank_account_column: "account_number"
+          amount_column: "amount"
+          auto_post: true
+
+      - step: "Create import document with the receivable account"
+        action: "create"
+        model: "customer_payment_import"
+        save_as: "import_doc"
+        as_user: "base.user_admin"
+        values:
+          type_id: "REC: ctype.id"
+          journal_id: "REC: journal.id"
+          account_id: "REC: account_receivable.id"
+
+      - step: "Create data line manually"
+        action: "create"
+        model: "customer_payment_import.data"
+        save_as: "line"
+        values:
+          import_id: "REC: import_doc.id"
+          sequence: 1
+          data:
+            '{"date": "2026-02-08", "account_number": "7100000001", "amount": "120000"}'
+
+      - step: "Confirm import"
+        action: "call"
+        target: "import_doc"
+        method: "action_confirm"
+        as_user: "base.user_admin"
+
+      - step: "Assert state confirm before approve (forces cache refresh)"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          state:
+            type: "value"
+            expected: "confirm"
+
+      - step: "Approve import to done (payment posted)"
+        action: "call"
+        target: "import_doc"
+        method: "action_approve_approval"
+        as_user: "base.user_admin"
+        context:
+          queue_job__no_delay: true
+
+      - step: "Get the payment created by the import"
+        action: "search"
+        model: "account.payment"
+        domain:
+          - ["partner_id", "=", "REC: partner.id"]
+          - ["journal_id", "=", "REC: journal.id"]
+        save_as: "import_payment"
+        limit: 1
+
+      - step: "Assert the import payment is posted"
+        action: "assert"
+        target: "import_payment"
+        asserts:
+          state:
+            type: "value"
+            expected: "posted"
+
+      - step: "Find the receivable line of the import payment"
+        action: "search"
+        model: "account.move.line"
+        domain:
+          - ["move_id", "=", "EVAL: registry['import_payment'].move_id.id"]
+          - ["account_id", "=", "REC: account_receivable.id"]
+        save_as: "import_line"
+        limit: 1
+
+      - step: "Reconcile the import payment to the invoice"
+        action: "call"
+        target: "invoice"
+        method: "js_assign_outstanding_line"
+        args:
+          - "REC: import_line.id"
+        asserts:
+          amount_residual:
+            type: "value"
+            expected: 80000
+
+      - step: "Queue to cancel from done"
+        action: "call"
+        target: "import_doc"
+        method: "action_queue_cancel"
+        as_user: "base.user_admin"
+        context:
+          queue_job__no_delay: true
+
+      - step: "Assert the import payment is cancelled, not deleted"
+        action: "assert"
+        target: "import_payment"
+        asserts:
+          state:
+            type: "value"
+            expected: "cancel"
+
+      - step: "Assert the document reached cancel"
+        action: "assert"
+        target: "import_doc"
+        asserts:
+          state:
+            type: "value"
+            expected: "cancel"
+
+      - step: "No reconciliation remains on the import payment line"
+        action: "search"
+        model: "account.partial.reconcile"
+        domain:
+          - "|"
+          - ["debit_move_id", "=", "REC: import_line.id"]
+          - ["credit_move_id", "=", "REC: import_line.id"]
+        save_as: "import_partials"
+        expect_count: 0
+
+      - step: "The manual payment reconciliation is kept"
+        action: "search"
+        model: "account.partial.reconcile"
+        domain:
+          - "|"
+          - ["debit_move_id", "=", "REC: manual_line.id"]
+          - ["credit_move_id", "=", "REC: manual_line.id"]
+        save_as: "manual_partials"
+        expect_count: 1
+
+      - step: "Invoice is open again only by the cancelled payment share"
+        action: "assert"
+        target: "invoice"
+        asserts:
+          amount_residual:
+            type: "value"
+            expected: 200000
