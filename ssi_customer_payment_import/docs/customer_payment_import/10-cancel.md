@@ -28,5 +28,8 @@
 
 - Status changes to **Queue Cancel**, and one background job per Import Data line that
   already has a linked Customer Payment is enqueued to cancel that payment.
+- Each of those payments is cancelled after its reconciliations are released, so the
+  invoices it had been matched to become open again by the amount that payment covered.
+  Reconciliations of other payments on the same invoices stay untouched.
 - Once every job has finished, the import automatically moves to **Cancelled** — see
   `11-auto-cancel`.

@@ -651,8 +651,16 @@ Solution: Verify the Date Format on the import Type matches the actual data,
         return vals
 
     def _cancel_payment(self):
-        """Cancel (if posted) or delete (if still draft) the linked
-        account.payment, and clear the link."""
+        """Cancel (if posted) or delete (if still draft) the payment.
+
+        A posted payment first has the reconciliations of its own
+        journal items released, so that the invoices it was matched to
+        become open again by exactly the amount it covered. Core
+        ``action_cancel`` only writes the cancelled state and leaves
+        the partial reconciles behind. Reconciliations of other
+        payments on the same invoices are not touched. The link to
+        the payment is cleared in every case.
+        """
         self.ensure_one()
         if not self.payment_id:
             return
@@ -660,6 +668,7 @@ Solution: Verify the Date Format on the import Type matches the actual data,
         payment = self.payment_id
         self.payment_id = False
         if payment.state == "posted":
+            payment.move_id.line_ids.remove_move_reconcile()
             payment.action_cancel()
         elif payment.state == "draft":
             payment.unlink()
